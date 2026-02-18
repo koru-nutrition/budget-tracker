@@ -658,7 +658,7 @@ export default function App({ initialData, onDataChange }){
         {tab==="week"&&(()=>{
           const wi=curWi>=0?curWi:0;
           const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
-          const curBal=rB.filter(x=>x!=null).pop()||OPENING;
+          const openBal=rB[wi]!=null?rB[wi]:(rB.slice(0,wi+1).filter(x=>x!=null).pop()||OPENING);
           // Actual data for this week
           const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
           const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
@@ -670,6 +670,7 @@ export default function App({ initialData, onDataChange }){
           const wkInc=hasActual?actInc:budInc;
           const wkExp=hasActual?actExp:budExp;
           const wkNet=wkInc-wkExp;
+          const closeBal=Math.round((openBal+wkInc-wkExp)*100)/100;
           const isComp=!!comp[wi];
           // Expense items for this week grouped by category
           const expRows=ECAT.map(cat=>{
@@ -718,15 +719,15 @@ export default function App({ initialData, onDataChange }){
               {isComp&&<span style={{fontSize:9,color:P.pos,background:P.posL,padding:"2px 8px",borderRadius:10,fontWeight:600,display:"inline-block",marginTop:4}}>Completed</span>}
             </div>
 
-            {/* Balance + Net */}
+            {/* Opening Balance + Closing Balance */}
             <div style={{display:"flex",gap:10}}>
               <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
-                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Balance</div>
-                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:curBal>=0?P.pos:P.neg}}>{fm(curBal)}</div>
+                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Opening Balance</div>
+                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:openBal>=0?P.pos:P.neg}}>{fm(openBal)}</div>
               </div>
               <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
-                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>This Week Net</div>
-                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:wkNet>=0?P.pos:P.neg}}>{fm(wkNet)}</div>
+                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Closing Balance</div>
+                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</div>
               </div>
             </div>
 
@@ -823,8 +824,8 @@ export default function App({ initialData, onDataChange }){
                 <span style={{color:P.txD}}>Expenses</span><span style={{color:P.neg,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>-{fm(wkExp)}</span>
               </div>
               <div style={{borderTop:"1px solid "+P.bd,marginTop:8,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:13}}>
-                <span style={{fontWeight:700,color:P.tx}}>Net</span>
-                <span style={{fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:wkNet>=0?P.pos:P.neg}}>{fm(wkNet)}</span>
+                <span style={{fontWeight:700,color:P.tx}}>Closing Balance</span>
+                <span style={{fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</span>
               </div>
             </div>
 
