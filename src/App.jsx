@@ -127,6 +127,7 @@ export default function App({ initialData, onDataChange }){
   const[hoverBar,setHoverBar]=useState(null);
   const[hoverSlice,setHoverSlice]=useState(null);
   // This Week tab state
+  const[weekOffset,setWeekOffset]=useState(0);
   const[twAddOpen,setTwAddOpen]=useState(false);
   const[twAddCat,setTwAddCat]=useState("");
   const[twAddAmt,setTwAddAmt]=useState("");
@@ -644,10 +645,10 @@ export default function App({ initialData, onDataChange }){
             </>;
           })()}
         </div>
-        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
-            <button key={k} onClick={()=>setTab(k)} style={{padding:"5px 12px",borderRadius:7,border:tab===k?"2px solid "+P.ac:"1px solid "+P.bd,
-              background:tab===k?P.acL:P.card,color:tab===k?P.acD:P.txD,fontSize:10,fontWeight:600,cursor:"pointer"}}>{l}</button>
+            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 16px",borderRadius:8,border:tab===k?"2px solid "+P.ac:"1px solid "+P.bd,
+              background:tab===k?P.acL:P.card,color:tab===k?P.acD:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:36}}>{l}</button>
           )}
         </div>
       </div>
@@ -656,8 +657,10 @@ export default function App({ initialData, onDataChange }){
 
         {/* ═══ THIS WEEK ═══ */}
         {tab==="week"&&(()=>{
-          const wi=curWi>=0?curWi:0;
+          const baseWi=curWi>=0?curWi:0;
+          const wi=Math.max(0,Math.min(W.length-1,baseWi+weekOffset));
           const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
+          const isCurrentWeek=wi===(curWi>=0?curWi:0);
           const openBal=rB[wi]!=null?rB[wi]:(rB.slice(0,wi+1).filter(x=>x!=null).pop()||OPENING);
           // Actual data for this week
           const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
@@ -714,8 +717,20 @@ export default function App({ initialData, onDataChange }){
           return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
             {/* Week header */}
             <div style={{textAlign:"center",paddingTop:4}}>
-              <div style={{fontSize:20,fontWeight:700,color:P.tx}}>This Week</div>
-              <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
+                <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
+                  style={{width:32,height:32,borderRadius:"50%",border:"1px solid "+P.bd,background:wi<=0?"transparent":P.card,color:wi<=0?P.txM:P.tx,fontSize:16,
+                    cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.4:1}}>&#8249;</button>
+                <div>
+                  <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
+                  <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+                </div>
+                <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
+                  style={{width:32,height:32,borderRadius:"50%",border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":P.card,color:wi>=W.length-1?P.txM:P.tx,fontSize:16,
+                    cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.4:1}}>&#8250;</button>
+              </div>
+              {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
+                style={{fontSize:10,color:P.ac,background:P.acL,border:"1px solid "+P.ac,borderRadius:10,padding:"2px 10px",cursor:"pointer",fontWeight:600,marginTop:6}}>Back to this week</button>}
               {isComp&&<span style={{fontSize:9,color:P.pos,background:P.posL,padding:"2px 8px",borderRadius:10,fontWeight:600,display:"inline-block",marginTop:4}}>Completed</span>}
             </div>
 
