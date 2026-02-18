@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { onAuth, signInWithGoogle, logOut, loadData, saveData } from "./firebase.js";
+import {
+  onAuth, signInWithGoogle, logOut,
+  getUserProfile, createHousehold, joinHousehold, leaveHousehold,
+  getHouseholdInfo, subscribeData, saveSharedData,
+} from "./firebase.js";
 import App from "./App.jsx";
 
 const P = {
@@ -9,37 +13,156 @@ const P = {
   pos: "#059669", neg: "#dc2626",
 };
 
+const btnBase = {
+  padding: "10px 24px", borderRadius: 8, border: "1px solid " + P.bd,
+  background: P.card, cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx,
+};
+const btnPrimary = { ...btnBase, background: P.ac, color: "#fff", border: "none" };
+const inputStyle = {
+  padding: "10px 14px", borderRadius: 8, border: "1px solid " + P.bd,
+  fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none",
+};
+
 export default function AppWrapper() {
   const [user, setUser] = useState(undefined); // undefined=loading, null=signed out
+  const [householdId, setHouseholdId] = useState(null);
+  const [householdInfo, setHouseholdInfo] = useState(null);
+  const [setupMode, setSetupMode] = useState(false);
   const [initialData, setInitialData] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
   const saveTimer = useRef(null);
+  const unsubData = useRef(null);
+  const latestUid = useRef(null);
 
+  // ─── Household setup form state ───
+  const [createName, setCreateName] = useState("");
+  const [joinId, setJoinId] = useState("");
+  const [setupError, setSetupError] = useState("");
+  const [setupLoading, setSetupLoading] = useState(false);
+
+  // ─── Household panel (shown from user bar) ───
+  const [hhPanel, setHhPanel] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [leaveConfirm, setLeaveConfirm] = useState(false);
+
+  // ─── Subscribe to household data (real-time) ───
+  const startSubscription = useCallback((hid, uid) => {
+    if (unsubData.current) unsubData.current();
+    unsubData.current = subscribeData(hid, ({ payload, updatedBy }) => {
+      if (payload) {
+        setInitialData(payload);
+        // If update came from another user, bump version to remount App
+        if (updatedBy && updatedBy !== uid) {
+          setDataVersion(v => v + 1);
+        }
+      }
+      setLoaded(true);
+    });
+  }, []);
+
+  // ─── Auth state change ───
   useEffect(() => {
     const unsub = onAuth(async (u) => {
       setUser(u);
       if (u) {
-        const data = await loadData(u.uid);
-        setInitialData(data);
-        setLoaded(true);
+        latestUid.current = u.uid;
+        const profile = await getUserProfile(u.uid);
+        if (profile && profile.householdId) {
+          setHouseholdId(profile.householdId);
+          const info = await getHouseholdInfo(profile.householdId);
+          setHouseholdInfo(info);
+          startSubscription(profile.householdId, u.uid);
+        } else {
+          // No household yet — show setup
+          setSetupMode(true);
+        }
       } else {
+        // Signed out — reset everything
+        if (unsubData.current) unsubData.current();
+        setHouseholdId(null);
+        setHouseholdInfo(null);
+        setSetupMode(false);
         setInitialData(null);
         setLoaded(false);
+        setDataVersion(0);
+        setHhPanel(false);
+        latestUid.current = null;
       }
     });
-    return unsub;
-  }, []);
+    return () => {
+      unsub();
+      if (unsubData.current) unsubData.current();
+    };
+  }, [startSubscription]);
 
-  // Debounced save — waits 2s after last change
+  // ─── Debounced save to shared household ───
   const onDataChange = useCallback((data) => {
-    if (!user) return;
+    if (!householdId || !latestUid.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      saveData(user.uid, data);
+      saveSharedData(householdId, latestUid.current, data);
     }, 2000);
-  }, [user]);
+  }, [householdId]);
 
-  // Loading state
+  // ─── Household setup actions ───
+  const handleCreate = async () => {
+    if (!createName.trim()) { setSetupError("Enter a household name"); return; }
+    setSetupLoading(true); setSetupError("");
+    try {
+      const hid = await createHousehold(user.uid, user.email, createName.trim());
+      setHouseholdId(hid);
+      const info = await getHouseholdInfo(hid);
+      setHouseholdInfo(info);
+      startSubscription(hid, user.uid);
+      setSetupMode(false);
+    } catch (e) {
+      setSetupError(e.message || "Failed to create household");
+    } finally { setSetupLoading(false); }
+  };
+
+  const handleJoin = async () => {
+    if (!joinId.trim()) { setSetupError("Paste a household ID"); return; }
+    setSetupLoading(true); setSetupError("");
+    try {
+      await joinHousehold(user.uid, user.email, joinId.trim());
+      setHouseholdId(joinId.trim());
+      const info = await getHouseholdInfo(joinId.trim());
+      setHouseholdInfo(info);
+      startSubscription(joinId.trim(), user.uid);
+      setSetupMode(false);
+    } catch (e) {
+      setSetupError(e.message || "Failed to join household");
+    } finally { setSetupLoading(false); }
+  };
+
+  const handleLeave = async () => {
+    if (!householdId) return;
+    try {
+      await leaveHousehold(user.uid, user.email, householdId);
+      if (unsubData.current) unsubData.current();
+      setHouseholdId(null);
+      setHouseholdInfo(null);
+      setInitialData(null);
+      setLoaded(false);
+      setDataVersion(0);
+      setHhPanel(false);
+      setLeaveConfirm(false);
+      setSetupMode(true);
+    } catch (e) {
+      console.error("Leave failed:", e);
+    }
+  };
+
+  const copyId = () => {
+    if (!householdId) return;
+    navigator.clipboard.writeText(householdId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  // ─── Loading state ───
   if (user === undefined) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
@@ -51,7 +174,7 @@ export default function AppWrapper() {
     );
   }
 
-  // Sign-in screen
+  // ─── Sign-in screen ───
   if (!user) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
@@ -70,15 +193,117 @@ export default function AppWrapper() {
     );
   }
 
-  // Signed in — render app
+  // ─── Household setup screen ───
+  if (setupMode) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
+        <div style={{ background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd,
+          boxShadow: "0 8px 32px rgba(0,0,0,.06)", width: 380, maxWidth: "90vw" }}>
+          <div style={{ fontSize: 48, textAlign: "center", marginBottom: 8 }}>💰</div>
+          <div style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 4 }}>Set Up Your Household</div>
+          <div style={{ fontSize: 12, color: P.txM, textAlign: "center", marginBottom: 28 }}>
+            Create a new household or join an existing one to share budget data.
+          </div>
+
+          {/* Create */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Create a household</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={createName} onChange={e => setCreateName(e.target.value)} placeholder="e.g. The Redmans"
+                style={inputStyle} onKeyDown={e => e.key === "Enter" && handleCreate()} />
+              <button onClick={handleCreate} disabled={setupLoading} style={btnPrimary}>Create</button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, height: 1, background: P.bd }} />
+            <div style={{ fontSize: 11, color: P.txM, fontWeight: 600 }}>OR</div>
+            <div style={{ flex: 1, height: 1, background: P.bd }} />
+          </div>
+
+          {/* Join */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Join an existing household</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={joinId} onChange={e => setJoinId(e.target.value)} placeholder="Paste household ID"
+                style={inputStyle} onKeyDown={e => e.key === "Enter" && handleJoin()} />
+              <button onClick={handleJoin} disabled={setupLoading} style={btnBase}>Join</button>
+            </div>
+          </div>
+
+          {setupError && <div style={{ fontSize: 12, color: P.neg, marginBottom: 12 }}>{setupError}</div>}
+
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button onClick={logOut} style={{ fontSize: 11, color: P.txM, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Signed in — render app ───
   return (
     <div>
-      {/* Tiny user bar */}
-      <div style={{ background: P.card, borderBottom: "1px solid " + P.bd, padding: "4px 20px", display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 }}>
+      {/* User bar */}
+      <div style={{ background: P.card, borderBottom: "1px solid " + P.bd, padding: "4px 20px",
+        display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, position: "relative" }}>
+        {householdInfo && (
+          <button onClick={() => setHhPanel(p => !p)}
+            style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid " + P.bd,
+              background: P.acL, color: P.ac, cursor: "pointer", fontWeight: 600 }}>
+            {householdInfo.name} ({householdInfo.memberEmails?.length || 1})
+          </button>
+        )}
         <span style={{ fontSize: 10, color: P.txM }}>{user.email}</span>
         <button onClick={logOut} style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, border: "1px solid " + P.bd, background: P.bg, color: P.txD, cursor: "pointer" }}>Sign out</button>
+
+        {/* Household panel dropdown */}
+        {hhPanel && householdInfo && (
+          <div style={{ position: "absolute", top: "100%", right: 20, marginTop: 4, background: P.card,
+            border: "1px solid " + P.bd, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,.1)",
+            padding: 16, width: 280, zIndex: 999 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{householdInfo.name}</div>
+
+            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Members</div>
+            <div style={{ marginBottom: 12 }}>
+              {(householdInfo.memberEmails || []).map(email => (
+                <div key={email} style={{ fontSize: 12, color: P.tx, padding: "2px 0" }}>{email}</div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Invite others</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              <input readOnly value={householdId || ""} style={{ ...inputStyle, fontSize: 11, padding: "6px 10px", background: P.bg }} />
+              <button onClick={copyId}
+                style={{ ...btnBase, padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap" }}>
+                {copied ? "Copied!" : "Copy ID"}
+              </button>
+            </div>
+
+            {!leaveConfirm ? (
+              <button onClick={() => setLeaveConfirm(true)}
+                style={{ fontSize: 11, color: P.neg, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                Leave household
+              </button>
+            ) : (
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: P.neg }}>Are you sure?</span>
+                <button onClick={handleLeave}
+                  style={{ ...btnBase, fontSize: 11, padding: "4px 12px", color: P.neg, borderColor: P.neg }}>
+                  Leave
+                </button>
+                <button onClick={() => setLeaveConfirm(false)}
+                  style={{ ...btnBase, fontSize: 11, padding: "4px 12px" }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      {loaded && <App initialData={initialData} onDataChange={onDataChange} />}
+      {loaded && <App key={dataVersion} initialData={initialData} onDataChange={onDataChange} />}
     </div>
   );
 }
