@@ -115,7 +115,7 @@ export default function App({ initialData, onDataChange }){
   const[catTxns,setCatTxns]=useState({});
   const[catMap,setCatMap]=useState({});
   const[comp,setComp]=useState({});
-  const[tab,setTab]=useState("cash");
+  const[tab,setTab]=useState("week");
   const[cellDetail,setCellDetail]=useState(null);
   const[eVal,setEVal]=useState("");
   const[ready,setReady]=useState(false);
@@ -126,11 +126,27 @@ export default function App({ initialData, onDataChange }){
   const[budgetOpen,setBudgetOpen]=useState(false);
   const[hoverBar,setHoverBar]=useState(null);
   const[hoverSlice,setHoverSlice]=useState(null);
+  // This Week tab state
+  const[twAddOpen,setTwAddOpen]=useState(false);
+  const[twAddCat,setTwAddCat]=useState("");
+  const[twAddAmt,setTwAddAmt]=useState("");
+  const[twAddNote,setTwAddNote]=useState("");
+  const[twEditId,setTwEditId]=useState(null);
+  const[twEditAmt,setTwEditAmt]=useState("");
   const[fyTab,setFyTab]=useState("fye26");
-  const[dashStart,setDashStart]=useState(0);
-  const[dashEnd,setDashEnd]=useState(74);
-  const[insStart,setInsStart]=useState(0);
-  const[insEnd,setInsEnd]=useState(FYE26_END);
+  // Compute initial FY range containing "today"
+  const[dashStart,setDashStart]=useState(()=>{
+    const now=new Date();for(let i=0;i<INIT_W.length;i++){const sun=INIT_W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){if(i<=FYE26_END)return 0;const fy=Math.floor((i-FYE26_END-1)/52);return FYE26_END+1+fy*52;}}return 0;
+  });
+  const[dashEnd,setDashEnd]=useState(()=>{
+    const now=new Date();for(let i=0;i<INIT_W.length;i++){const sun=INIT_W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){if(i<=FYE26_END)return FYE26_END;const fy=Math.floor((i-FYE26_END-1)/52);return Math.min(FYE26_END+1+fy*52+51,INIT_W.length-1);}}return FYE26_END;
+  });
+  const[insStart,setInsStart]=useState(()=>{
+    const now=new Date();for(let i=0;i<INIT_W.length;i++){const sun=INIT_W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){if(i<=FYE26_END)return 0;const fy=Math.floor((i-FYE26_END-1)/52);return FYE26_END+1+fy*52;}}return 0;
+  });
+  const[insEnd,setInsEnd]=useState(()=>{
+    const now=new Date();for(let i=0;i<INIT_W.length;i++){const sun=INIT_W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){if(i<=FYE26_END)return FYE26_END;const fy=Math.floor((i-FYE26_END-1)/52);return Math.min(FYE26_END+1+fy*52+51,INIT_W.length-1);}}return FYE26_END;
+  });
   const[headerFy,setHeaderFy]=useState(null);// null = auto-detect
   // Import
   const[impOpen,setImpOpen]=useState(false);
@@ -629,7 +645,7 @@ export default function App({ initialData, onDataChange }){
           })()}
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center"}}>
-          {[["cash","📋 Cashflow"],["dash","📊 Dashboard"],["insights","🔍 Insights"]].map(([k,l])=>
+          {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
             <button key={k} onClick={()=>setTab(k)} style={{padding:"5px 12px",borderRadius:7,border:tab===k?"2px solid "+P.ac:"1px solid "+P.bd,
               background:tab===k?P.acL:P.card,color:tab===k?P.acD:P.txD,fontSize:10,fontWeight:600,cursor:"pointer"}}>{l}</button>
           )}
@@ -637,6 +653,186 @@ export default function App({ initialData, onDataChange }){
       </div>
 
       <div style={{padding:"14px 20px",maxWidth:1400,margin:"0 auto"}}>
+
+        {/* ═══ THIS WEEK ═══ */}
+        {tab==="week"&&(()=>{
+          const wi=curWi>=0?curWi:0;
+          const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
+          const curBal=rB.filter(x=>x!=null).pop()||OPENING;
+          // Actual data for this week
+          const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
+          const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
+          const hasActual=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+          // Budgeted data for this week
+          const budInc=INC.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
+          const budExp=AEXP.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
+          // Use actual if available, budget otherwise
+          const wkInc=hasActual?actInc:budInc;
+          const wkExp=hasActual?actExp:budExp;
+          const wkNet=wkInc-wkExp;
+          const isComp=!!comp[wi];
+          // Expense items for this week grouped by category
+          const expRows=ECAT.map(cat=>{
+            const items=cat.items.map(it=>{
+              const actual=catData[it.id]&&catData[it.id][wi];
+              const bud=budgetForWeek(budgets[it.id],wi);
+              return{id:it.id,n:it.n,actual,bud,display:actual!=null?actual:bud||null};
+            }).filter(x=>x.display!=null&&x.display!==0);
+            return{n:cat.n,c:cat.c,items};
+          }).filter(g=>g.items.length>0);
+          // Income items
+          const incRows=INC.map(c=>{
+            const actual=catData[c.id]&&catData[c.id][wi];
+            const bud=budgetForWeek(budgets[c.id],wi);
+            return{id:c.id,n:c.n,actual,bud,display:actual!=null?actual:bud||null};
+          }).filter(x=>x.display!=null&&x.display!==0);
+          // Add/edit expense handler
+          const addExpense=()=>{
+            if(!twAddCat||!twAddAmt)return;
+            const amt=parseFloat(twAddAmt);if(isNaN(amt)||amt===0)return;
+            setCatData(prev=>{
+              const n={...prev};
+              if(!n[twAddCat])n[twAddCat]=Array(NW).fill(null);
+              else n[twAddCat]=[...n[twAddCat]];
+              n[twAddCat][wi]=(n[twAddCat][wi]||0)+Math.abs(amt);
+              return n;
+            });
+            setTwAddCat("");setTwAddAmt("");setTwAddNote("");setTwAddOpen(false);
+          };
+          const updateExpense=(catId,newAmt)=>{
+            const v=parseFloat(newAmt);if(isNaN(v))return;
+            setCatData(prev=>{
+              const n={...prev};
+              if(!n[catId])n[catId]=Array(NW).fill(null);
+              else n[catId]=[...n[catId]];
+              n[catId][wi]=v===0?null:Math.abs(v);
+              return n;
+            });
+            setTwEditId(null);setTwEditAmt("");
+          };
+          return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
+            {/* Week header */}
+            <div style={{textAlign:"center",paddingTop:4}}>
+              <div style={{fontSize:20,fontWeight:700,color:P.tx}}>This Week</div>
+              <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+              {isComp&&<span style={{fontSize:9,color:P.pos,background:P.posL,padding:"2px 8px",borderRadius:10,fontWeight:600,display:"inline-block",marginTop:4}}>Completed</span>}
+            </div>
+
+            {/* Balance + Net */}
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Balance</div>
+                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:curBal>=0?P.pos:P.neg}}>{fm(curBal)}</div>
+              </div>
+              <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>This Week Net</div>
+                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:wkNet>=0?P.pos:P.neg}}>{fm(wkNet)}</div>
+              </div>
+            </div>
+
+            {/* Income */}
+            <div style={{background:P.card,borderRadius:12,border:"1px solid "+P.bd,overflow:"hidden"}}>
+              <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:13,fontWeight:700,color:P.pos}}>Income</div>
+                <div style={{fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:P.pos}}>{fm(wkInc)}</div>
+              </div>
+              {incRows.length>0?incRows.map(inc=>
+                <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL}}>
+                  <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(inc.bud)}</span>}
+                    <span style={{fontSize:13,fontWeight:600,fontFamily:"'JetBrains Mono',monospace",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
+                    {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                  </div>
+                </div>
+              ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No income expected</div>}
+            </div>
+
+            {/* Expenses */}
+            <div style={{background:P.card,borderRadius:12,border:"1px solid "+P.bd,overflow:"hidden"}}>
+              <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:13,fontWeight:700,color:P.neg}}>Expenses</div>
+                <div style={{fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:P.neg}}>{fm(wkExp)}</div>
+              </div>
+              {expRows.length>0?expRows.map(grp=>
+                <div key={grp.n}>
+                  <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bdL,background:P.bg}}>
+                    <span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:grp.c}}/>
+                    <span style={{fontSize:10,fontWeight:600,color:P.txD}}>{grp.n}</span>
+                  </div>
+                  {grp.items.map(it=>
+                    <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL}}>
+                      <span style={{fontSize:12,color:P.tx}}>{it.n}</span>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(it.bud)}</span>}
+                        {twEditId===it.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                          <span style={{fontSize:10,color:P.txM}}>$</span>
+                          <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
+                            onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
+                            style={{width:70,padding:"3px 6px",border:"1px solid "+P.ac,borderRadius:5,fontSize:11,fontFamily:"'JetBrains Mono',monospace",background:P.acL,color:P.tx}}/>
+                          <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"3px 8px",border:"none",borderRadius:4,background:P.ac,color:"#fff",cursor:"pointer",fontWeight:600}}>Save</button>
+                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"3px 6px",border:"1px solid "+P.bd,borderRadius:4,background:P.bg,color:P.txD,cursor:"pointer"}}>Cancel</button>
+                        </div>:<>
+                          <span onClick={()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}}
+                            style={{fontSize:13,fontWeight:600,fontFamily:"'JetBrains Mono',monospace",color:P.neg,opacity:it.actual!=null?1:0.5,cursor:"pointer",
+                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
+                          {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                        </>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No expenses expected</div>}
+
+              {/* Add expense button */}
+              {!twAddOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
+                <button onClick={()=>{setTwAddOpen(true);setTwAddCat(AEXP[0]?AEXP[0].id:"")}}
+                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:P.bg,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add Expense</button>
+              </div>
+              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:P.bg}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Add Expense</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
+                    style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:6,fontSize:11,background:P.card,color:P.tx}}>
+                    {ECAT.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
+                  </select>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1,display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:11,color:P.txM}}>$</span>
+                      <input type="number" step="0.01" placeholder="0.00" value={twAddAmt} onChange={e=>setTwAddAmt(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")addExpense()}}
+                        style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:6,fontSize:12,fontFamily:"'JetBrains Mono',monospace",background:P.card,color:P.tx}}/>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                    <button onClick={()=>{setTwAddOpen(false);setTwAddCat("");setTwAddAmt("");setTwAddNote("")}}
+                      style={{padding:"7px 14px",borderRadius:6,border:"1px solid "+P.bd,background:P.card,color:P.txD,fontSize:11,cursor:"pointer"}}>Cancel</button>
+                    <button onClick={addExpense}
+                      style={{padding:"7px 16px",borderRadius:6,border:"none",background:P.ac,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Add</button>
+                  </div>
+                </div>
+              </div>}
+            </div>
+
+            {/* Quick summary bar */}
+            <div style={{background:P.card,borderRadius:12,padding:"14px 16px",border:"1px solid "+P.bd}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
+                <span style={{color:P.txD}}>Income</span><span style={{color:P.pos,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>{fm(wkInc)}</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginTop:4}}>
+                <span style={{color:P.txD}}>Expenses</span><span style={{color:P.neg,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>-{fm(wkExp)}</span>
+              </div>
+              <div style={{borderTop:"1px solid "+P.bd,marginTop:8,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:13}}>
+                <span style={{fontWeight:700,color:P.tx}}>Net</span>
+                <span style={{fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:wkNet>=0?P.pos:P.neg}}>{fm(wkNet)}</span>
+              </div>
+            </div>
+
+            {!hasActual&&budInc===0&&budExp===0&&<div style={{background:P.card,borderRadius:12,padding:"20px 16px",border:"1px solid "+P.bd,textAlign:"center"}}>
+              <div style={{fontSize:11,color:P.txM}}>No data or budgets set for this week. Import transactions on the Cashflow tab or set budgets on the Dashboard tab.</div>
+            </div>}
+          </div>;
+        })()}
 
         {/* ═══ DASHBOARD (future-focused) ═══ */}
         {tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
