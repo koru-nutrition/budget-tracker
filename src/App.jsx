@@ -1069,8 +1069,8 @@ export default function App({ initialData, onDataChange }){
             </div>
             {/* Spending Trend */}
             {/* Pie + Bar */}
-            {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14}}>
-              <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1}}>
+            {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+              <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
                 <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
                 <div style={{position:"relative"}}>
                 <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
@@ -1104,7 +1104,7 @@ export default function App({ initialData, onDataChange }){
                 </div>
                 </div>
               </div>
-              <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:0}}>
+              <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
                 <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>By Type</div>
                 {insights.grpTotals.map((g,i)=>{
                   const maxT=insights.grpTotals[0]?insights.grpTotals[0].total:1;
