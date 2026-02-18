@@ -3,9 +3,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Per-user profile & legacy data
-    match /users/{userId}/{document=**} {
+    // Per-user profile doc + legacy data subcollections
+    match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     // Household doc — any authed user can create; members can read/update
     match /households/{householdId} {
