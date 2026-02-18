@@ -1,11 +1,23 @@
 // Paste these into Firebase Console → Firestore → Rules
-// This restricts all data access to the authenticated user who owns it
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Per-user profile & legacy data
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Household doc — any authed user can create; members can read/update
+    match /households/{householdId} {
+      allow create: if request.auth != null;
+      allow read, update: if request.auth != null
+        && request.auth.uid in resource.data.members;
+    }
+    // Household data — members only
+    match /households/{householdId}/data/{docId} {
+      allow read, write: if request.auth != null
+        && request.auth.uid in
+           get(/databases/$(database)/documents/households/$(householdId)).data.members;
     }
   }
 }
