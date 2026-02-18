@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, addDoc, collection } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, addDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBeTaCMIbz0sxhAGvakjYoziD42WySR_5w",
@@ -69,6 +69,7 @@ export const createHousehold = async (uid, email, name) => {
     name,
     members: [uid],
     memberEmails: [email],
+    pendingInvites: [],
     createdBy: uid,
     createdAt: new Date().toISOString(),
   });
@@ -148,4 +149,104 @@ export const saveSharedData = async (householdId, uid, data) => {
   } catch (e) {
     console.error("saveSharedData failed:", e);
   }
+};
+
+// ─── Invitations ───
+export const sendInvitation = async (uid, email, householdId, householdName, inviteeEmail) => {
+  const normalizedEmail = inviteeEmail.trim().toLowerCase();
+
+  if (normalizedEmail === email.toLowerCase()) {
+    throw new Error("You cannot invite yourself");
+  }
+
+  const hhSnap = await getDoc(doc(db, "households", householdId));
+  if (!hhSnap.exists()) throw new Error("Household not found");
+  const hhData = hhSnap.data();
+
+  if ((hhData.memberEmails || []).map(e => e.toLowerCase()).includes(normalizedEmail)) {
+    throw new Error("This person is already a member");
+  }
+
+  if ((hhData.pendingInvites || []).map(e => e.toLowerCase()).includes(normalizedEmail)) {
+    throw new Error("An invitation has already been sent to this email");
+  }
+
+  await addDoc(collection(db, "invitations"), {
+    householdId,
+    householdName,
+    inviteeEmail: normalizedEmail,
+    invitedBy: uid,
+    invitedByEmail: email,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+    respondedAt: null,
+  });
+
+  await updateDoc(doc(db, "households", householdId), {
+    pendingInvites: arrayUnion(normalizedEmail),
+  });
+};
+
+export const getPendingInvitations = async (email) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  const q = query(
+    collection(db, "invitations"),
+    where("inviteeEmail", "==", normalizedEmail),
+    where("status", "==", "pending")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
+export const acceptInvitation = async (uid, email, invitation) => {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const profile = await getUserProfile(uid);
+  if (profile && profile.householdId) {
+    throw new Error("You are already in a household. Leave it first to accept this invitation.");
+  }
+
+  await updateDoc(doc(db, "invitations", invitation.id), {
+    status: "accepted",
+    respondedAt: new Date().toISOString(),
+  });
+
+  await updateDoc(doc(db, "households", invitation.householdId), {
+    members: arrayUnion(uid),
+    memberEmails: arrayUnion(normalizedEmail),
+    pendingInvites: arrayRemove(normalizedEmail),
+  });
+
+  await setUserProfile(uid, { householdId: invitation.householdId });
+  return invitation.householdId;
+};
+
+export const declineInvitation = async (email, invitationId, householdId) => {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  await updateDoc(doc(db, "invitations", invitationId), {
+    status: "declined",
+    respondedAt: new Date().toISOString(),
+  });
+
+  await updateDoc(doc(db, "households", householdId), {
+    pendingInvites: arrayRemove(normalizedEmail),
+  });
+};
+
+export const cancelInvitation = async (invitationId, householdId, inviteeEmail) => {
+  await deleteDoc(doc(db, "invitations", invitationId));
+  await updateDoc(doc(db, "households", householdId), {
+    pendingInvites: arrayRemove(inviteeEmail.toLowerCase()),
+  });
+};
+
+export const getHouseholdPendingInvites = async (householdId) => {
+  const q = query(
+    collection(db, "invitations"),
+    where("householdId", "==", householdId),
+    where("status", "==", "pending")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };

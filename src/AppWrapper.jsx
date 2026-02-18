@@ -3,6 +3,8 @@ import {
   onAuth, signInWithGoogle, logOut,
   getUserProfile, createHousehold, joinHousehold, leaveHousehold,
   getHouseholdInfo, subscribeData, saveSharedData,
+  sendInvitation, getPendingInvitations, acceptInvitation,
+  declineInvitation, cancelInvitation, getHouseholdPendingInvites,
 } from "./firebase.js";
 import App from "./App.jsx";
 
@@ -46,6 +48,14 @@ export default function AppWrapper() {
   const [copied, setCopied] = useState(false);
   const [leaveConfirm, setLeaveConfirm] = useState(false);
 
+  // ─── Invitation state ───
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  const [outgoingInvites, setOutgoingInvites] = useState([]);
+
   // ─── Subscribe to household data (real-time) ───
   const startSubscription = useCallback((hid, uid) => {
     if (unsubData.current) unsubData.current();
@@ -76,6 +86,12 @@ export default function AppWrapper() {
         } else {
           // No household yet — show setup
           setSetupMode(true);
+          try {
+            const invites = await getPendingInvitations(u.email);
+            setPendingInvitations(invites);
+          } catch (e) {
+            console.error("Failed to fetch invitations:", e);
+          }
         }
       } else {
         // Signed out — reset everything
@@ -162,6 +178,67 @@ export default function AppWrapper() {
     });
   };
 
+  // ─── Invitation handlers ───
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim()) { setInviteError("Enter an email address"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail.trim())) {
+      setInviteError("Enter a valid email address"); return;
+    }
+    setInviteLoading(true); setInviteError(""); setInviteSuccess("");
+    try {
+      await sendInvitation(user.uid, user.email, householdId, householdInfo.name, inviteEmail.trim());
+      setInviteSuccess(`Invitation sent to ${inviteEmail.trim()}`);
+      setInviteEmail("");
+      const updated = await getHouseholdPendingInvites(householdId);
+      setOutgoingInvites(updated);
+      setTimeout(() => setInviteSuccess(""), 3000);
+    } catch (e) {
+      setInviteError(e.message || "Failed to send invitation");
+    } finally { setInviteLoading(false); }
+  };
+
+  const handleAcceptInvite = async (invitation) => {
+    setSetupLoading(true); setSetupError("");
+    try {
+      const hid = await acceptInvitation(user.uid, user.email, invitation);
+      setHouseholdId(hid);
+      const info = await getHouseholdInfo(hid);
+      setHouseholdInfo(info);
+      startSubscription(hid, user.uid);
+      setSetupMode(false);
+      setPendingInvitations([]);
+    } catch (e) {
+      setSetupError(e.message || "Failed to accept invitation");
+    } finally { setSetupLoading(false); }
+  };
+
+  const handleDeclineInvite = async (invitation) => {
+    try {
+      await declineInvitation(user.email, invitation.id, invitation.householdId);
+      setPendingInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+    } catch (e) {
+      console.error("Decline failed:", e);
+    }
+  };
+
+  const handleCancelInvite = async (invitation) => {
+    try {
+      await cancelInvitation(invitation.id, invitation.householdId, invitation.inviteeEmail);
+      setOutgoingInvites(prev => prev.filter(inv => inv.id !== invitation.id));
+    } catch (e) {
+      console.error("Cancel invite failed:", e);
+    }
+  };
+
+  // ─── Fetch outgoing invites when panel opens ───
+  useEffect(() => {
+    if (hhPanel && householdId) {
+      getHouseholdPendingInvites(householdId)
+        .then(setOutgoingInvites)
+        .catch(e => console.error("Failed to load outgoing invites:", e));
+    }
+  }, [hhPanel, householdId]);
+
   // ─── Loading state ───
   if (user === undefined) {
     return (
@@ -204,6 +281,30 @@ export default function AppWrapper() {
           <div style={{ fontSize: 12, color: P.txM, textAlign: "center", marginBottom: 28 }}>
             Create a new household or join an existing one to share budget data.
           </div>
+
+          {/* Pending Invitations */}
+          {pendingInvitations.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>You have been invited!</div>
+              {pendingInvitations.map(inv => (
+                <div key={inv.id} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid " + P.bd, marginBottom: 8, background: P.acL }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: P.tx }}>{inv.householdName}</div>
+                  <div style={{ fontSize: 11, color: P.txM, marginBottom: 8 }}>Invited by {inv.invitedByEmail}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => handleAcceptInvite(inv)} disabled={setupLoading}
+                      style={{ ...btnPrimary, padding: "6px 16px", fontSize: 12 }}>Accept</button>
+                    <button onClick={() => handleDeclineInvite(inv)} disabled={setupLoading}
+                      style={{ ...btnBase, padding: "6px 16px", fontSize: 12 }}>Decline</button>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16, marginBottom: 0 }}>
+                <div style={{ flex: 1, height: 1, background: P.bd }} />
+                <div style={{ fontSize: 11, color: P.txM, fontWeight: 600 }}>OR</div>
+                <div style={{ flex: 1, height: 1, background: P.bd }} />
+              </div>
+            </div>
+          )}
 
           {/* Create */}
           <div style={{ marginBottom: 20 }}>
@@ -273,14 +374,42 @@ export default function AppWrapper() {
               ))}
             </div>
 
-            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Invite others</div>
-            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-              <input readOnly value={householdId || ""} style={{ ...inputStyle, fontSize: 11, padding: "6px 10px", background: P.bg }} />
-              <button onClick={copyId}
-                style={{ ...btnBase, padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap" }}>
-                {copied ? "Copied!" : "Copy ID"}
+            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Invite someone</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+              <input value={inviteEmail} onChange={e => { setInviteEmail(e.target.value); setInviteError(""); setInviteSuccess(""); }}
+                placeholder="Enter email address" style={{ ...inputStyle, fontSize: 11, padding: "6px 10px" }}
+                onKeyDown={e => e.key === "Enter" && handleSendInvite()} />
+              <button onClick={handleSendInvite} disabled={inviteLoading}
+                style={{ ...btnPrimary, padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap" }}>
+                {inviteLoading ? "..." : "Invite"}
               </button>
             </div>
+            {inviteError && <div style={{ fontSize: 11, color: P.neg, marginBottom: 4 }}>{inviteError}</div>}
+            {inviteSuccess && <div style={{ fontSize: 11, color: P.pos, marginBottom: 4 }}>{inviteSuccess}</div>}
+
+            {outgoingInvites.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: P.txM, marginBottom: 4 }}>Pending invitations:</div>
+                {outgoingInvites.map(inv => (
+                  <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0" }}>
+                    <span style={{ fontSize: 11, color: P.txD }}>{inv.inviteeEmail}</span>
+                    <button onClick={() => handleCancelInvite(inv)}
+                      style={{ fontSize: 10, color: P.neg, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Cancel</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <details style={{ marginBottom: 14 }}>
+              <summary style={{ fontSize: 10, color: P.txM, cursor: "pointer" }}>Share household ID instead</summary>
+              <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                <input readOnly value={householdId || ""} style={{ ...inputStyle, fontSize: 11, padding: "6px 10px", background: P.bg }} />
+                <button onClick={copyId}
+                  style={{ ...btnBase, padding: "6px 12px", fontSize: 11, whiteSpace: "nowrap" }}>
+                  {copied ? "Copied!" : "Copy ID"}
+                </button>
+              </div>
+            </details>
 
             {!leaveConfirm ? (
               <button onClick={() => setLeaveConfirm(true)}
