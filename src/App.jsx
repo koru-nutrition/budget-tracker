@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 
 // ─── Weeks: dynamic, starting Mon 20 Oct 2025 ───
 const BASE_START=new Date(2025,9,20);// Mon Oct 20 2025
@@ -119,7 +119,7 @@ export default function App({ initialData, onDataChange }){
   const[cellDetail,setCellDetail]=useState(null);
   const[eVal,setEVal]=useState("");
   const[ready,setReady]=useState(false);
-  const scrollRef=React.useRef(null);
+  const scrollRef=useRef(null);
   const[collCats,setCollCats]=useState({});
   const[showAccts,setShowAccts]=useState(false);
   const[budgets,setBudgets]=useState({});
