@@ -716,20 +716,26 @@ export default function App({ initialData, onDataChange }){
           };
           return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
             {/* Week header */}
-            <div style={{textAlign:"center",paddingTop:4,position:"relative"}}>
-              <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                style={{position:"absolute",left:0,top:"50%",transform:"translateY(-50%)",width:32,height:32,borderRadius:"50%",border:"1px solid "+P.bd,background:wi<=0?"transparent":P.card,color:wi<=0?P.txM:P.tx,fontSize:16,
-                  cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.4:1}}>&#8249;</button>
-              <div>
-                <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
-                <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+            <div style={{textAlign:"center",paddingTop:4}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
+                <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
+                  style={{width:36,height:36,borderRadius:"50%",border:"1px solid "+(wi<=0?P.bdL:P.bd),background:wi<=0?"transparent":P.card,color:wi<=0?P.txM:P.tx,fontSize:18,
+                    cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
+                    flexShrink:0,boxShadow:wi<=0?"none":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.15s ease"}}>&#8249;</button>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
+                  <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+                </div>
+                <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
+                  style={{width:36,height:36,borderRadius:"50%",border:"1px solid "+(wi>=W.length-1?P.bdL:P.bd),background:wi>=W.length-1?"transparent":P.card,color:wi>=W.length-1?P.txM:P.tx,fontSize:18,
+                    cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
+                    flexShrink:0,boxShadow:wi>=W.length-1?"none":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.15s ease"}}>&#8250;</button>
               </div>
-              <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
-                style={{position:"absolute",right:0,top:"50%",transform:"translateY(-50%)",width:32,height:32,borderRadius:"50%",border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":P.card,color:wi>=W.length-1?P.txM:P.tx,fontSize:16,
-                  cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.4:1}}>&#8250;</button>
-              {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
-                style={{fontSize:10,color:P.ac,background:P.acL,border:"1px solid "+P.ac,borderRadius:10,padding:"2px 10px",cursor:"pointer",fontWeight:600,marginTop:6}}>Back to this week</button>}
-              {isComp&&<span style={{fontSize:9,color:P.pos,background:P.posL,padding:"2px 8px",borderRadius:10,fontWeight:600,display:"inline-block",marginTop:4}}>Completed</span>}
+              <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:isCurrentWeek&&!isComp?0:24}}>
+                {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
+                  style={{fontSize:10,color:P.ac,background:P.acL,border:"1px solid "+P.ac,borderRadius:10,padding:"3px 12px",cursor:"pointer",fontWeight:600}}>Back to this week</button>}
+                {isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"1px solid "+P.pos,padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}
+              </div>
             </div>
 
             {/* Opening Balance + Closing Balance */}
