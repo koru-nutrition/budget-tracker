@@ -714,8 +714,8 @@ export default function App({ initialData, onDataChange }){
           {/* Budgeted Expenses: Pie + Bar */}
           {forecast.wkExp>0&&(()=>{
             const bCats=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
-            return <div style={{display:"flex",gap:14}}>
-            <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1}}>
+            return <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+            <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
               <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Budgeted Expenses</div>
               <div style={{position:"relative"}}>
               <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
@@ -749,7 +749,7 @@ export default function App({ initialData, onDataChange }){
               </div>
               </div>
             </div>
-            <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:0}}>
+            <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
               <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>By Category</div>
               {bCats.map((g,i)=>{
                 const isH=hoverSlice===i;
