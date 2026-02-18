@@ -15,4 +15,4 @@ Push to `main` branch — GitHub Actions automatically builds and deploys to Git
 
 ## Firebase
 
-Data is stored in Firestore under authenticated user accounts. Google sign-in only.
+Data is stored in Firestore under authenticated user accounts. Google sign-in only. 
