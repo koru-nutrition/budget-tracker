@@ -9,20 +9,22 @@ import {
 import App from "./App.jsx";
 
 const P = {
-  bg: "#f7f8fa", card: "#ffffff", bd: "#e5e7ec",
-  ac: "#2563eb", acL: "#dbeafe", acD: "#1d4ed8",
-  tx: "#1a1d23", txD: "#5a6070", txM: "#9098a8",
-  pos: "#059669", neg: "#dc2626",
+  bg: "#0B0F14", card: "#141A22", bd: "rgba(255,255,255,0.06)",
+  surfAlt: "#111820", surfHov: "#1A2230",
+  ac: "#4ADE80", acL: "rgba(74,222,128,0.15)", acD: "#4ADE80",
+  tx: "#E8ECF1", txD: "#7A8699", txM: "#4A5568",
+  pos: "#4ADE80", neg: "#F87171",
 };
 
 const btnBase = {
   padding: "10px 24px", borderRadius: 8, border: "1px solid " + P.bd,
-  background: P.card, cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx,
+  background: "rgba(255,255,255,0.04)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx, minHeight: 44,
 };
-const btnPrimary = { ...btnBase, background: P.ac, color: "#fff", border: "none" };
+const btnPrimary = { ...btnBase, background: P.acL, color: P.ac, border: "none" };
 const inputStyle = {
   padding: "10px 14px", borderRadius: 8, border: "1px solid " + P.bd,
   fontSize: 13, width: "100%", boxSizing: "border-box", outline: "none",
+  background: P.card, color: P.tx,
 };
 
 export default function AppWrapper() {
@@ -245,7 +247,7 @@ export default function AppWrapper() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>💰</div>
-          <div style={{ fontSize: 14, color: P.txM }}>Loading...</div>
+          <div style={{ fontSize: 14, color: P.txD }}>Loading...</div>
         </div>
       </div>
     );
@@ -255,13 +257,13 @@ export default function AppWrapper() {
   if (!user) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
-        <div style={{ textAlign: "center", background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd, boxShadow: "0 8px 32px rgba(0,0,0,.06)" }}>
+        <div style={{ textAlign: "center", background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd, boxShadow: "none" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>💰</div>
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Budget Tracker</div>
-          <div style={{ fontSize: 12, color: P.txM, marginBottom: 24 }}>Sign in to access your cashflow data</div>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: P.tx }}>Budget Tracker</div>
+          <div style={{ fontSize: 12, color: P.txD, marginBottom: 24 }}>Sign in to access your cashflow data</div>
           <button onClick={signInWithGoogle}
             style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 auto", padding: "10px 24px", borderRadius: 8,
-              border: "1px solid " + P.bd, background: P.card, cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx }}>
+              border: "1px solid " + P.bd, background: "rgba(255,255,255,0.04)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx, minHeight: 44 }}>
             <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#34A853" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#FBBC05" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
             Sign in with Google
           </button>
@@ -275,21 +277,21 @@ export default function AppWrapper() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
         <div style={{ background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd,
-          boxShadow: "0 8px 32px rgba(0,0,0,.06)", width: 380, maxWidth: "90vw" }}>
+          boxShadow: "none", width: 380, maxWidth: "90vw" }}>
           <div style={{ fontSize: 48, textAlign: "center", marginBottom: 8 }}>💰</div>
-          <div style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 4 }}>Set Up Your Household</div>
-          <div style={{ fontSize: 12, color: P.txM, textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 4, color: P.tx }}>Set Up Your Household</div>
+          <div style={{ fontSize: 12, color: P.txD, textAlign: "center", marginBottom: 28 }}>
             Create a new household or join an existing one to share budget data.
           </div>
 
           {/* Pending Invitations */}
           {pendingInvitations.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>You have been invited!</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: P.tx }}>You have been invited!</div>
               {pendingInvitations.map(inv => (
                 <div key={inv.id} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid " + P.bd, marginBottom: 8, background: P.acL }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: P.tx }}>{inv.householdName}</div>
-                  <div style={{ fontSize: 11, color: P.txM, marginBottom: 8 }}>Invited by {inv.invitedByEmail}</div>
+                  <div style={{ fontSize: 11, color: P.txD, marginBottom: 8 }}>Invited by {inv.invitedByEmail}</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => handleAcceptInvite(inv)} disabled={setupLoading}
                       style={{ ...btnPrimary, padding: "6px 16px", fontSize: 12 }}>Accept</button>
@@ -308,7 +310,7 @@ export default function AppWrapper() {
 
           {/* Create */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Create a household</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: P.tx }}>Create a household</div>
             <div style={{ display: "flex", gap: 8 }}>
               <input value={createName} onChange={e => setCreateName(e.target.value)} placeholder="e.g. The Redmans"
                 style={inputStyle} onKeyDown={e => e.key === "Enter" && handleCreate()} />
@@ -324,7 +326,7 @@ export default function AppWrapper() {
 
           {/* Join */}
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Join an existing household</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: P.tx }}>Join an existing household</div>
             <div style={{ display: "flex", gap: 8 }}>
               <input value={joinId} onChange={e => setJoinId(e.target.value)} placeholder="Paste household ID"
                 style={inputStyle} onKeyDown={e => e.key === "Enter" && handleJoin()} />
@@ -335,7 +337,7 @@ export default function AppWrapper() {
           {setupError && <div style={{ fontSize: 12, color: P.neg, marginBottom: 12 }}>{setupError}</div>}
 
           <div style={{ textAlign: "center", marginTop: 16 }}>
-            <button onClick={logOut} style={{ fontSize: 11, color: P.txM, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+            <button onClick={logOut} style={{ fontSize: 11, color: P.txD, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               Sign out
             </button>
           </div>
@@ -357,24 +359,24 @@ export default function AppWrapper() {
             {householdInfo.name} ({householdInfo.memberEmails?.length || 1})
           </button>
         )}
-        <span style={{ fontSize: 10, color: P.txM }}>{user.email}</span>
-        <button onClick={logOut} style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, border: "1px solid " + P.bd, background: P.bg, color: P.txD, cursor: "pointer" }}>Sign out</button>
+        <span style={{ fontSize: 10, color: P.txD }}>{user.email}</span>
+        <button onClick={logOut} style={{ fontSize: 9, padding: "2px 8px", borderRadius: 4, border: "1px solid " + P.bd, background: "rgba(255,255,255,0.04)", color: P.txD, cursor: "pointer" }}>Sign out</button>
 
         {/* Household panel dropdown */}
         {hhPanel && householdInfo && (
           <div style={{ position: "absolute", top: "100%", right: 20, marginTop: 4, background: P.card,
-            border: "1px solid " + P.bd, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,.1)",
+            border: "1px solid " + P.bd, borderRadius: 10, boxShadow: "0 12px 32px rgba(0,0,0,.4)",
             padding: 16, width: 280, zIndex: 999 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>{householdInfo.name}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: P.tx }}>{householdInfo.name}</div>
 
-            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Members</div>
+            <div style={{ fontSize: 11, color: P.txD, marginBottom: 4, fontWeight: 600 }}>Members</div>
             <div style={{ marginBottom: 12 }}>
               {(householdInfo.memberEmails || []).map(email => (
                 <div key={email} style={{ fontSize: 12, color: P.tx, padding: "2px 0" }}>{email}</div>
               ))}
             </div>
 
-            <div style={{ fontSize: 11, color: P.txM, marginBottom: 4, fontWeight: 600 }}>Invite someone</div>
+            <div style={{ fontSize: 11, color: P.txD, marginBottom: 4, fontWeight: 600 }}>Invite someone</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
               <input value={inviteEmail} onChange={e => { setInviteEmail(e.target.value); setInviteError(""); setInviteSuccess(""); }}
                 placeholder="Enter email address" style={{ ...inputStyle, fontSize: 11, padding: "6px 10px" }}

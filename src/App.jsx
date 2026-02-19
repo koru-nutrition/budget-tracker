@@ -16,20 +16,20 @@ const DEF_INC=[
   {id:"ik",n:"Koru Nutrition"},{id:"ir",n:"Kristen"},{id:"io",n:"Other Income"}
 ];
 const DEF_ECAT=[
-  {n:"Housing",c:"#3b82f6",items:[{id:"eh",n:"Mortgage"},
+  {n:"Housing",c:"#60A5FA",items:[{id:"eh",n:"Mortgage"},
     {id:"er",n:"Rates"},{id:"eg",n:"Rockgas"},{id:"ep",n:"Contact Power/BB/Phone"}]},
-  {n:"Transportation",c:"#8b5cf6",items:[{id:"ef",n:"Fuel"},{id:"em",n:"Maintenance"}]},
-  {n:"Food",c:"#f97316",items:[{id:"egr",n:"Groceries"},{id:"et",n:"Takeaway"},{id:"ere",n:"Restaurant"}]},
-  {n:"Insurance",c:"#ec4899",items:[{id:"ia",n:"AMI Insurance"},{id:"il",n:"Chubb Life Insurance"},{id:"ip",n:"Partners Health Insurance"}]},
-  {n:"Personal",c:"#eab308",items:[{id:"ph",n:"Phone"},{id:"pc",n:"Clothing"},{id:"pa",n:"Hair/Cosmetic"},
+  {n:"Transportation",c:"#A78BFA",items:[{id:"ef",n:"Fuel"},{id:"em",n:"Maintenance"}]},
+  {n:"Food",c:"#FB923C",items:[{id:"egr",n:"Groceries"},{id:"et",n:"Takeaway"},{id:"ere",n:"Restaurant"}]},
+  {n:"Insurance",c:"#E879F9",items:[{id:"ia",n:"AMI Insurance"},{id:"il",n:"Chubb Life Insurance"},{id:"ip",n:"Partners Health Insurance"}]},
+  {n:"Personal",c:"#FBBF24",items:[{id:"ph",n:"Phone"},{id:"pc",n:"Clothing"},{id:"pa",n:"Hair/Cosmetic"},
     {id:"pg",n:"Gifts"},{id:"po",n:"Other"}]},
-  {n:"Subscriptions",c:"#10b981",items:[{id:"sn",n:"Netflix"},{id:"sg",n:"Google"},{id:"sk",n:"Kindle"},{id:"se",n:"Entertainment"}]},
-  {n:"Health",c:"#ef4444",items:[{id:"hd",n:"Doctor"},{id:"hp",n:"Pharmacy"}]},
-  {n:"Giving",c:"#a855f7",items:[{id:"gc",n:"Church"},{id:"ga",n:"Charity"}]},
-  {n:"Debt",c:"#64748b",items:[{id:"da",n:"ASB CC"},{id:"dg",n:"Gem Visa"},{id:"dr",n:"Overdue Rates"}]},
-  {n:"Savings",c:"#06b6d4",items:[{id:"sv",n:"Savings"},{id:"si",n:"Investments"}]},
+  {n:"Subscriptions",c:"#34D399",items:[{id:"sn",n:"Netflix"},{id:"sg",n:"Google"},{id:"sk",n:"Kindle"},{id:"se",n:"Entertainment"}]},
+  {n:"Health",c:"#F87171",items:[{id:"hd",n:"Doctor"},{id:"hp",n:"Pharmacy"}]},
+  {n:"Giving",c:"#C084FC",items:[{id:"gc",n:"Church"},{id:"ga",n:"Charity"}]},
+  {n:"Debt",c:"#94A3B8",items:[{id:"da",n:"ASB CC"},{id:"dg",n:"Gem Visa"},{id:"dr",n:"Overdue Rates"}]},
+  {n:"Savings",c:"#38BDF8",items:[{id:"sv",n:"Savings"},{id:"si",n:"Investments"}]},
 ];
-const CAT_COLORS=["#3b82f6","#8b5cf6","#f97316","#ec4899","#eab308","#10b981","#ef4444","#a855f7","#64748b","#06b6d4","#0ea5e9","#d946ef","#84cc16","#f43f5e","#14b8a6"];
+const CAT_COLORS=["#60A5FA","#A78BFA","#FB923C","#E879F9","#FBBF24","#34D399","#F87171","#C084FC","#94A3B8","#38BDF8","#0ea5e9","#d946ef","#84cc16","#f43f5e","#14b8a6"];
 
 // ─── Auto-categorisation rules ───
 const CAT_RULES=[
@@ -63,15 +63,17 @@ const FILE_HINTS=[
 ];
 
 const P={
-  bg:"#f7f8fa",card:"#ffffff",bd:"#e5e7ec",bdL:"#f0f1f4",
-  tx:"#1a1d23",txD:"#5a6070",txM:"#9098a8",
-  ac:"#2563eb",acL:"#dbeafe",acD:"#1d4ed8",
-  pos:"#059669",posL:"#d1fae5",neg:"#dc2626",negL:"#fee2e2",
-  warn:"#d97706",warnL:"#fef3c7",
-  cBg:"#eef7ee",cBd:"#b6e0b6",uBg:"#eef3ff",uBd:"#a8c8ff",
-  fBg:"#f7f8fa",fBd:"#e5e7ec",sBg:"#fef9ee",sBd:"#f0d88a",
+  bg:"#0B0F14",card:"#141A22",bd:"rgba(255,255,255,0.06)",bdL:"rgba(255,255,255,0.04)",
+  surfHov:"#1A2230",surfAlt:"#111820",
+  tx:"#E8ECF1",txD:"#7A8699",txM:"#4A5568",
+  ac:"#4ADE80",acL:"rgba(74,222,128,0.15)",acD:"#4ADE80",
+  pos:"#4ADE80",posL:"rgba(74,222,128,0.15)",neg:"#F87171",negL:"rgba(248,113,113,0.15)",
+  warn:"#FBBF24",warnL:"rgba(251,191,36,0.15)",
+  blue:"#60A5FA",
+  cBg:"rgba(74,222,128,0.08)",cBd:"rgba(74,222,128,0.2)",uBg:"rgba(96,165,250,0.08)",uBd:"rgba(96,165,250,0.2)",
+  fBg:"#0B0F14",fBd:"rgba(255,255,255,0.06)",sBg:"rgba(251,191,36,0.08)",sBd:"rgba(251,191,36,0.2)",
 };
-const ACCT_COLORS=["#2563eb","#059669","#d97706","#7c3aed","#dc2626","#0891b2","#c026d3","#65a30d","#ea580c","#6366f1"];
+const ACCT_COLORS=["#60A5FA","#4ADE80","#FBBF24","#A78BFA","#F87171","#38BDF8","#E879F9","#34D399","#FB923C","#C084FC"];
 
 // FY boundaries: FY26 ends at week containing March 31
 
@@ -186,7 +188,7 @@ export default function App({ initialData, onDataChange }){
   useEffect(()=>{
     if(!confetti)return;
     const ps=Array.from({length:55},(_,i)=>({i,x:Math.random()*100,y:-10-Math.random()*20,s:4+Math.random()*5,
-      c:["#2563eb","#059669","#d97706","#dc2626","#7c3aed","#f59e0b"][i%6],r:Math.random()*360}));
+      c:["#4ADE80","#60A5FA","#FBBF24","#F87171","#A78BFA","#E879F9"][i%6],r:Math.random()*360}));
     setParts(ps);
     const iv=setInterval(()=>setParts(p=>p.map(t=>({...t,y:t.y+1.5+Math.random(),x:t.x+Math.sin(t.y/10)*0.3,r:t.r+3})).filter(t=>t.y<110)),30);
     const to=setTimeout(()=>{clearInterval(iv);setParts([]);setConfetti(false)},3500);
@@ -469,8 +471,8 @@ export default function App({ initialData, onDataChange }){
   // ─── Grid ───
   const wis=Array.from({length:NW},(_,i)=>i);
   const statStyle=s=>({c:{bg:P.cBg,bd:P.cBd},u:{bg:P.uBg,bd:P.uBd},f:{bg:P.fBg,bd:P.fBd},s:{bg:P.sBg,bd:P.sBd}}[s]);
-  const cS={padding:"4px 8px",textAlign:"right",fontSize:11,fontFamily:"'JetBrains Mono',monospace",borderBottom:"1px solid "+P.bdL};
-  const stL={position:"sticky",left:0,zIndex:2,background:P.card,boxShadow:"2px 0 4px rgba(0,0,0,.06)"};
+  const cS={padding:"4px 8px",textAlign:"right",fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",borderBottom:"1px solid "+P.bdL};
+  const stL={position:"sticky",left:0,zIndex:2,background:P.card,borderRight:"1px solid "+P.bd};
 
   // ─── Budget: check if a budget applies to a specific week ───
   const budgetForWeek=useCallback((b,wi)=>{
@@ -623,13 +625,13 @@ export default function App({ initialData, onDataChange }){
 
   return(
     <div style={{minHeight:"100vh",background:P.bg,color:P.tx,fontFamily:"'DM Sans',sans-serif"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
       {particles.length>0&&<div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:9999}}>
         {particles.map(t=><div key={t.i} style={{position:"absolute",left:t.x+"%",top:t.y+"%",width:t.s,height:t.s,background:t.c,borderRadius:t.i%3?"2px":"50%",transform:"rotate("+t.r+"deg)",opacity:Math.max(0,t.s/7)}}/>)}
       </div>}
 
       {/* Header */}
-      <div style={{background:P.card,borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <span style={{fontSize:16,fontWeight:700,color:P.ac,flexShrink:0}}>💰</span>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
@@ -639,36 +641,37 @@ export default function App({ initialData, onDataChange }){
             const activeFy=headerFy?fys.find(f=>f.id===headerFy)||autoFy:autoFy;
             const fyWis=Array.from({length:activeFy.end-activeFy.start+1},(_,i)=>activeFy.start+i);
             const fyComp=fyWis.filter(i=>comp[i]).length;
+            const pctDone=fyComp/fyWis.length*100;
             const cycleNext=()=>{
               const idx=fys.findIndex(f=>f.id===activeFy.id);
               const next=fys[(idx+1)%fys.length];
               setHeaderFy(next.id===autoFy.id?null:next.id);
             };
             return <>
-              <span onClick={cycleNext} style={{fontSize:10,color:P.acD,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{activeFy.label}</span>
-              <div style={{display:"flex",gap:1,minWidth:0,flex:"0 1 auto",overflow:"hidden"}}>
-                {fyWis.map(i=>{const s=getStat(i);const pre=startWeek!=null&&i<startWeek;return <div key={i} style={{minWidth:2,flex:"1 1 5px",height:12,background:pre?"#e5e7eb":s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:"#ddd",borderRadius:1,opacity:pre?0.3:s==="f"?0.3:0.8}}/>})}
+              <span onClick={cycleNext} style={{fontSize:10,color:P.ac,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{activeFy.label}</span>
+              <div style={{flex:"0 1 120px",minWidth:40,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:"100%",width:pctDone+"%",background:P.ac,borderRadius:2,transition:"width .3s"}}/>
               </div>
-              <span style={{fontSize:10,color:P.ac,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{fyComp}/{fyWis.length}</span>
+              <span style={{fontSize:10,color:P.txD,fontWeight:500,flexShrink:0,whiteSpace:"nowrap"}}>{fyComp}/{fyWis.length}</span>
             </>;
           })()}
         </div>
         {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
-            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 16px",borderRadius:8,border:tab===k?"2px solid "+P.ac:"1px solid "+P.bd,
-              background:tab===k?P.acL:P.card,color:tab===k?P.acD:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:36}}>{l}</button>
+            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid rgba(255,255,255,0.12)":"1px solid transparent",
+              background:tab===k?"rgba(255,255,255,0.1)":"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease"}}>{l}</button>
           )}
         </div>}
       </div>
 
-      <div style={{padding:"14px 20px",maxWidth:1400,margin:"0 auto"}}>
+      <div style={{padding:tab==="cash"?"14px 20px":"14px 20px",maxWidth:tab==="cash"?1400:800,margin:"0 auto"}}>
 
         {/* ═══ START WEEK SETUP (shown when no startWeek is set) ═══ */}
         {startWeek==null&&!startSetupOpen&&(()=>{
           // Auto-detect current FY to suggest a start week
           const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
           return <div style={{maxWidth:480,margin:"40px auto",textAlign:"center"}}>
-            <div style={{background:P.card,borderRadius:16,padding:"36px 32px",border:"1px solid "+P.bd,boxShadow:"0 8px 32px rgba(0,0,0,.06)"}}>
+            <div style={{background:P.card,borderRadius:16,padding:"36px 32px",border:"1px solid "+P.bd}}>
               <div style={{fontSize:36,marginBottom:12}}>📅</div>
               <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Set Up Your Financial Year</div>
               <div style={{fontSize:12,color:P.txD,marginBottom:20,lineHeight:1.5}}>
@@ -676,7 +679,7 @@ export default function App({ initialData, onDataChange }){
                 You can always change this later.
               </div>
               <button onClick={()=>setStartSetupOpen(true)}
-                style={{padding:"12px 32px",borderRadius:10,border:"none",background:P.ac,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 12px rgba(37,99,235,0.2)"}}>
+                style={{padding:"12px 32px",borderRadius:10,border:"none",background:P.acL,color:P.ac,fontSize:14,fontWeight:600,cursor:"pointer",minHeight:44}}>
                 Get Started
               </button>
             </div>
@@ -687,7 +690,7 @@ export default function App({ initialData, onDataChange }){
           const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
           const fyWis=Array.from({length:autoFy.end-autoFy.start+1},(_,i)=>autoFy.start+i);
           return <div style={{maxWidth:480,margin:"40px auto"}}>
-            <div style={{background:P.card,borderRadius:16,padding:"28px 28px",border:"1px solid "+P.bd,boxShadow:"0 8px 32px rgba(0,0,0,.06)"}}>
+            <div style={{background:P.card,borderRadius:16,padding:"28px 28px",border:"1px solid "+P.bd}}>
               <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Choose Start Week</div>
               <div style={{fontSize:11,color:P.txD,marginBottom:16,lineHeight:1.5}}>
                 Select the week you want to start tracking from. Weeks before this will be blank but you can backfill later by changing the start week.
@@ -699,7 +702,7 @@ export default function App({ initialData, onDataChange }){
               <div style={{marginBottom:14}}>
                 <div style={{fontSize:11,fontWeight:600,color:P.txD,marginBottom:4}}>Start Week</div>
                 <select id="setupStartWeek" defaultValue={curWi>=0?curWi:autoFy.start}
-                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx}}>
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.card,color:P.tx,minHeight:44}}>
                   {fyWis.map(wi=>{
                     const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
                     return <option key={wi} value={wi}>{fd(mon)} – {fd(sun)}{wi===curWi?" (this week)":""}</option>;
@@ -711,13 +714,13 @@ export default function App({ initialData, onDataChange }){
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <span style={{fontSize:13,color:P.txM,fontWeight:600}}>$</span>
                   <input id="setupOpenBal" type="number" step="0.01" defaultValue="0" placeholder="0.00"
-                    style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+                    style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:44}}/>
                 </div>
                 <div style={{fontSize:10,color:P.txM,marginTop:4}}>Your bank balance at the start of the chosen week</div>
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button onClick={()=>setStartSetupOpen(false)}
-                  style={{padding:"10px 20px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.txD,fontSize:12,cursor:"pointer"}}>Back</button>
+                  style={{padding:"10px 20px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:12,cursor:"pointer",minHeight:44}}>Back</button>
                 <button onClick={()=>{
                   const sw=parseInt(document.getElementById("setupStartWeek").value);
                   const ob=parseFloat(document.getElementById("setupOpenBal").value)||0;
@@ -725,7 +728,7 @@ export default function App({ initialData, onDataChange }){
                   setOpeningBalance(Math.round(ob*100)/100);
                   setStartSetupOpen(false);
                 }}
-                  style={{padding:"10px 24px",borderRadius:8,border:"none",background:P.ac,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 12px rgba(37,99,235,0.2)"}}>
+                  style={{padding:"10px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44}}>
                   Confirm
                 </button>
               </div>
@@ -744,22 +747,22 @@ export default function App({ initialData, onDataChange }){
             <div style={{textAlign:"center",paddingTop:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi<=0?"transparent":P.acL,color:wi<=0?P.txM:P.ac,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,flexShrink:0}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:20,fontWeight:700,color:P.txM}}>Week of {fd(mon)}</div>
                   <div style={{fontSize:12,color:P.txM,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)}
-                  style={{width:44,height:44,borderRadius:14,border:"none",background:P.acL,color:P.ac,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.tx,fontSize:22,fontWeight:700,
                     cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,flexShrink:0}}>&#8250;</button>
               </div>
             </div>
-            <div style={{background:P.card,borderRadius:12,padding:"28px 20px",border:"1px solid "+P.bd,textAlign:"center"}}>
+            <div style={{background:P.card,borderRadius:16,padding:"28px 20px",border:"1px solid "+P.bd,textAlign:"center"}}>
               <div style={{fontSize:24,marginBottom:8,opacity:0.4}}>📅</div>
               <div style={{fontSize:14,fontWeight:600,color:P.txM,marginBottom:6}}>Before tracking started</div>
               <div style={{fontSize:11,color:P.txM,lineHeight:1.5,marginBottom:14}}>This week is before your start week. To backfill data for earlier weeks, update your start week in Settings on the Cashflow tab.</div>
-              <button onClick={()=>setWeekOffset(0)} style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"6px 16px",cursor:"pointer",fontWeight:600}}>Back to this week</button>
+              <button onClick={()=>setWeekOffset(0)} style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"8px 18px",cursor:"pointer",fontWeight:600,minHeight:44}}>Back to this week</button>
             </div>
           </div>;
           const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:openingBalance);
@@ -820,49 +823,49 @@ export default function App({ initialData, onDataChange }){
             <div style={{textAlign:"center",paddingTop:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi<=0?"transparent":P.acL,color:wi<=0?P.txM:P.ac,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
-                    flexShrink:0,boxShadow:wi<=0?"none":"0 2px 8px rgba(37,99,235,0.10)",transition:"all 0.2s ease"}}>&#8249;</button>
+                    flexShrink:0,transition:"all 0.2s ease"}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
                   <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
-                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi>=W.length-1?"transparent":P.acL,color:wi>=W.length-1?P.txM:P.ac,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":"rgba(255,255,255,0.04)",color:wi>=W.length-1?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
-                    flexShrink:0,boxShadow:wi>=W.length-1?"none":"0 2px 8px rgba(37,99,235,0.10)",transition:"all 0.2s ease"}}>&#8250;</button>
+                    flexShrink:0,transition:"all 0.2s ease"}}>&#8250;</button>
               </div>
               <div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:24}}>
                 {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
-                  style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"6px 16px",cursor:"pointer",fontWeight:600,boxShadow:"0 1px 4px rgba(37,99,235,0.08)",transition:"all 0.2s ease"}}>Back to this week</button>}
-                {isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"1px solid "+P.pos,padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}
+                  style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"8px 18px",cursor:"pointer",fontWeight:600,minHeight:44,transition:"all 0.2s ease"}}>Back to this week</button>}
+                {isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}
               </div>
             </div>
 
             {/* Opening Balance + Closing Balance */}
             <div style={{display:"flex",gap:10}}>
-              <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
-                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Opening Balance</div>
-                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:openBal>=0?P.pos:P.neg}}>{fm(openBal)}</div>
+              <div style={{flex:1,background:P.card,borderRadius:16,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
+                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>Opening Balance</div>
+                <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:openBal>=0?P.pos:P.neg}}>{fm(openBal)}</div>
               </div>
-              <div style={{flex:1,background:P.card,borderRadius:12,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
-                <div style={{fontSize:9,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Closing Balance</div>
-                <div style={{fontSize:22,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</div>
+              <div style={{flex:1,background:P.card,borderRadius:16,padding:"16px 14px",border:"1px solid "+P.bd,textAlign:"center"}}>
+                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>Closing Balance</div>
+                <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</div>
               </div>
             </div>
 
             {/* Income */}
-            <div style={{background:P.card,borderRadius:12,border:"1px solid "+P.bd,overflow:"hidden"}}>
+            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
               <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontSize:13,fontWeight:700,color:P.pos}}>Income</div>
-                <div style={{fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:P.pos}}>{fm(wkInc)}</div>
+                <div style={{fontSize:15,fontWeight:600,color:P.pos}}>Income</div>
+                <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos}}>{fm(wkInc)}</div>
               </div>
               {incRows.length>0?incRows.map(inc=>
                 <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL}}>
                   <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(inc.bud)}</span>}
-                    <span style={{fontSize:13,fontWeight:600,fontFamily:"'JetBrains Mono',monospace",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
+                    <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
                     {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                   </div>
                 </div>
@@ -870,19 +873,19 @@ export default function App({ initialData, onDataChange }){
             </div>
 
             {/* Expenses */}
-            <div style={{background:P.card,borderRadius:12,border:"1px solid "+P.bd,overflow:"hidden"}}>
+            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
               <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontSize:13,fontWeight:700,color:P.neg}}>Expenses</div>
-                <div style={{fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:P.neg}}>{fm(wkExp)}</div>
+                <div style={{fontSize:15,fontWeight:600,color:P.neg}}>Expenses</div>
+                <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg}}>{fm(wkExp)}</div>
               </div>
               {expRows.length>0?expRows.map(grp=>
                 <div key={grp.n}>
-                  <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bdL,background:P.bg}}>
-                    <span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:grp.c}}/>
+                  <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bdL,background:"rgba(255,255,255,0.02)"}}>
+                    <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:grp.c}}/>
                     <span style={{fontSize:10,fontWeight:600,color:P.txD}}>{grp.n}</span>
                   </div>
                   {grp.items.map(it=>
-                    <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL}}>
+                    <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL,minHeight:44}}>
                       <span style={{fontSize:12,color:P.tx}}>{it.n}</span>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(it.bud)}</span>}
@@ -890,12 +893,12 @@ export default function App({ initialData, onDataChange }){
                           <span style={{fontSize:10,color:P.txM}}>$</span>
                           <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
                             onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
-                            style={{width:70,padding:"3px 6px",border:"1px solid "+P.ac,borderRadius:5,fontSize:11,fontFamily:"'JetBrains Mono',monospace",background:P.acL,color:P.tx}}/>
-                          <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"3px 8px",border:"none",borderRadius:4,background:P.ac,color:"#fff",cursor:"pointer",fontWeight:600}}>Save</button>
-                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"3px 6px",border:"1px solid "+P.bd,borderRadius:4,background:P.bg,color:P.txD,cursor:"pointer"}}>Cancel</button>
+                            style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
+                          <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
+                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
                         </div>:<>
                           <span onClick={()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}}
-                            style={{fontSize:13,fontWeight:600,fontFamily:"'JetBrains Mono',monospace",color:P.neg,opacity:it.actual!=null?1:0.5,cursor:"pointer",
+                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,cursor:"pointer",
                               borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
                           {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                         </>}
@@ -908,13 +911,13 @@ export default function App({ initialData, onDataChange }){
               {/* Add expense button */}
               {!twAddOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
                 <button onClick={()=>{setTwAddOpen(true);setTwAddCat(AEXP[0]?AEXP[0].id:"")}}
-                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:P.bg,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add Expense</button>
+                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Expense</button>
               </div>
-              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:P.bg}}>
+              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:"rgba(255,255,255,0.02)"}}>
                 <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Add Expense</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
-                    style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:6,fontSize:11,background:P.card,color:P.tx}}>
+                    style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:44}}>
                     {ECAT.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
                   </select>
                   <div style={{display:"flex",gap:8}}>
@@ -922,34 +925,34 @@ export default function App({ initialData, onDataChange }){
                       <span style={{fontSize:11,color:P.txM}}>$</span>
                       <input type="number" step="0.01" placeholder="0.00" value={twAddAmt} onChange={e=>setTwAddAmt(e.target.value)}
                         onKeyDown={e=>{if(e.key==="Enter")addExpense()}}
-                        style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:6,fontSize:12,fontFamily:"'JetBrains Mono',monospace",background:P.card,color:P.tx}}/>
+                        style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:44}}/>
                     </div>
                   </div>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                     <button onClick={()=>{setTwAddOpen(false);setTwAddCat("");setTwAddAmt("");setTwAddNote("")}}
-                      style={{padding:"7px 14px",borderRadius:6,border:"1px solid "+P.bd,background:P.card,color:P.txD,fontSize:11,cursor:"pointer"}}>Cancel</button>
+                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
                     <button onClick={addExpense}
-                      style={{padding:"7px 16px",borderRadius:6,border:"none",background:P.ac,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Add</button>
+                      style={{padding:"7px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add</button>
                   </div>
                 </div>
               </div>}
             </div>
 
             {/* Quick summary bar */}
-            <div style={{background:P.card,borderRadius:12,padding:"14px 16px",border:"1px solid "+P.bd}}>
+            <div style={{background:P.surfAlt,borderRadius:16,padding:"14px 16px",border:"1px solid "+P.bd}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
-                <span style={{color:P.txD}}>Income</span><span style={{color:P.pos,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>{fm(wkInc)}</span>
+                <span style={{color:P.txD}}>Income</span><span style={{color:P.pos,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(wkInc)}</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginTop:4}}>
-                <span style={{color:P.txD}}>Expenses</span><span style={{color:P.neg,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>-{fm(wkExp)}</span>
+                <span style={{color:P.txD}}>Expenses</span><span style={{color:P.neg,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>-{fm(wkExp)}</span>
               </div>
               <div style={{borderTop:"1px solid "+P.bd,marginTop:8,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:13}}>
                 <span style={{fontWeight:700,color:P.tx}}>Closing Balance</span>
-                <span style={{fontWeight:700,fontFamily:"'JetBrains Mono',monospace",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</span>
+                <span style={{fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:closeBal>=0?P.pos:P.neg}}>{fm(closeBal)}</span>
               </div>
             </div>
 
-            {!hasActual&&budInc===0&&budExp===0&&<div style={{background:P.card,borderRadius:12,padding:"20px 16px",border:"1px solid "+P.bd,textAlign:"center"}}>
+            {!hasActual&&budInc===0&&budExp===0&&<div style={{background:P.card,borderRadius:16,padding:"20px 16px",border:"1px solid "+P.bd,textAlign:"center"}}>
               <div style={{fontSize:11,color:P.txM}}>No data or budgets set for this week. Import transactions on the Cashflow tab or set budgets on the Dashboard tab.</div>
             </div>}
           </div>;
@@ -959,41 +962,50 @@ export default function App({ initialData, onDataChange }){
         {startWeek!=null&&tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Date Range */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontSize:10,color:P.txD,fontWeight:600}}>Range:</span>
-            <select value={dashStart} onChange={e=>setDashStart(+e.target.value)} style={{fontSize:10,padding:"4px 8px",borderRadius:5,border:"1px solid "+P.bd}}>
+            <span style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500}}>Range:</span>
+            <select value={dashStart} onChange={e=>setDashStart(+e.target.value)} style={{fontSize:10,padding:"6px 10px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.tx,minHeight:44}}>
               {W.map((d,i)=><option key={i} value={i}>w/e {fd(d)}</option>)}
             </select>
             <span style={{fontSize:10,color:P.txM}}>to</span>
-            <select value={dashEnd} onChange={e=>setDashEnd(+e.target.value)} style={{fontSize:10,padding:"4px 8px",borderRadius:5,border:"1px solid "+P.bd}}>
+            <select value={dashEnd} onChange={e=>setDashEnd(+e.target.value)} style={{fontSize:10,padding:"6px 10px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.tx,minHeight:44}}>
               {W.map((d,i)=><option key={i} value={i}>w/e {fd(d)}</option>)}
             </select>
             {fys.map(fy=><button key={fy.id} onClick={()=>{setDashStart(fy.start);setDashEnd(fy.end)}}
-              style={{fontSize:9,padding:"3px 8px",borderRadius:4,border:"1px solid "+P.bd,background:dashStart===fy.start&&dashEnd===fy.end?P.acL:P.card,
-                color:dashStart===fy.start&&dashEnd===fy.end?P.acD:P.txM,cursor:"pointer"}}>{fy.label}</button>)}
+              style={{fontSize:10,padding:"8px 14px",borderRadius:10,border:dashStart===fy.start&&dashEnd===fy.end?"none":"1px solid "+P.bd,
+                background:dashStart===fy.start&&dashEnd===fy.end?P.acL:"transparent",
+                color:dashStart===fy.start&&dashEnd===fy.end?P.ac:P.txM,cursor:"pointer",fontWeight:500,minHeight:44}}>{fy.label}</button>)}
           </div>
-          {/* KPI Cards */}
-          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;const curBal=rB.filter(x=>x!=null).pop()||openingBalance;
-              const endBal=forecast.fBal[dashEnd+1]!=null?forecast.fBal[dashEnd+1]:null;
-              const startBal=forecast.fBal[dashStart]!=null?forecast.fBal[dashStart]:(rB[dashStart]||openingBalance);
-              const futCf=endBal!=null?endBal-startBal:null;
-              return [{l:"Weeks in Range",v:dashEnd-dashStart+1,fmt:false},
+          {/* KPI Cards - 2x2 grid */}
+          {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;const curBal=rB.filter(x=>x!=null).pop()||openingBalance;
+            const endBal=forecast.fBal[dashEnd+1]!=null?forecast.fBal[dashEnd+1]:null;
+            const startBal=forecast.fBal[dashStart]!=null?forecast.fBal[dashStart]:(rB[dashStart]||openingBalance);
+            const futCf=endBal!=null?endBal-startBal:null;
+            const stats=[{l:"Weeks in Range",v:dashEnd-dashStart+1,fmt:false},
               {l:"Current Balance",v:curBal,g:true},
               {l:"Budget Net /wk",v:forecast.wkNet,g:true},
-              {l:"Projected Net Cashflow",v:futCf,g:true},
-              {l:"Projected End Balance",v:endBal,g:true}
-            ]})().map(s=><div key={s.l} style={{background:P.card,borderRadius:10,padding:"14px 18px",border:"1px solid "+P.bd,flex:1,minWidth:130}}>
-                <div style={{fontSize:9,color:P.txD,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{s.l}</div>
-                <div style={{fontSize:20,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
-                  color:s.fmt===false?P.tx:s.g?(s.v!=null&&s.v>=0?P.pos:P.neg):s.p?P.pos:P.neg}}>{s.fmt===false?s.v:fm(s.v)}</div>
-              </div>
-            )}
-          </div>
+              {l:"Projected Net Cashflow",v:futCf,g:true}
+            ];
+            return <>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>{s.l}</div>
+                <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+                  color:s.fmt===false?P.tx:s.g?(s.v!=null&&s.v>=0?P.pos:P.neg):P.tx}}>{s.fmt===false?s.v:fm(s.v)}</div>
+              </div>)}
+            </div>
+            {/* Projected End Balance - standalone hero */}
+            <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, rgba(74,222,128,0.05) 100%)",borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>Projected End Balance</div>
+              <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+                color:endBal!=null&&endBal>=0?P.pos:P.neg}}>{fm(endBal)}</div>
+            </div>
+            </>;
+          })()}
           {/* Forecast Chart */}
-          <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
+          <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div style={{fontSize:13,fontWeight:600}}>Balance Forecast</div>
-              <button onClick={()=>setBudgetOpen(true)} style={{fontSize:10,padding:"4px 12px",borderRadius:6,border:"1px solid "+P.ac+"40",background:P.acL,color:P.acD,cursor:"pointer",fontWeight:600}}>⚙ Set Budgets</button>
+              <div style={{fontSize:15,fontWeight:600}}>Balance Forecast</div>
+              <button onClick={()=>setBudgetOpen(true)} style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",fontWeight:600,minHeight:44}}>Set Budgets</button>
             </div>
             <div style={{position:"relative"}}>
               <div style={{display:"flex",alignItems:"end",gap:2,height:120}}>
@@ -1006,15 +1018,15 @@ export default function App({ initialData, onDataChange }){
                   const isHov=hoverBar===wi;
                   return <div key={wi} onMouseEnter={()=>setHoverBar(wi)} onMouseLeave={()=>setHoverBar(null)}
                     style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",cursor:"pointer",position:"relative"}}>
-                    <div style={{width:"100%",height:Math.max(h,2)+"%",background:v!=null?(v>=0?P.pos:P.neg):"#ddd",
+                    <div style={{width:"100%",height:Math.max(h,2)+"%",background:v!=null?(v>=0?P.pos:P.neg):"rgba(255,255,255,0.06)",
                       borderRadius:"2px 2px 0 0",opacity:isHov?1:(isActual?0.8:0.35),transition:"height .3s, opacity .15s",
                       outline:isHov?"2px solid "+(v>=0?P.pos:P.neg):"none"}}/>
                   </div>;
                 })}
               </div>
               {hoverBar!=null&&<div style={{position:"absolute",top:-8,left:"50%",transform:"translateX(-50%)",
-                background:P.tx,color:"#fff",padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
-                fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
+                background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
+                fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
                 {fd(new Date(W[hoverBar].getTime()-6*864e5))}: {fm(forecast.fBal[hoverBar+1])}
                 {hoverBar>forecast.lastActual&&!comp[hoverBar]?" (forecast)":""}
               </div>}
@@ -1032,8 +1044,8 @@ export default function App({ initialData, onDataChange }){
           {forecast.wkExp>0&&(()=>{
             const bCats=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
             return <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-            <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Budgeted Expenses</div>
+            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Budgeted Expenses</div>
               <div style={{position:"relative"}}>
               <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
                 {bCats.reduce((acc,g,i)=>{
@@ -1057,62 +1069,61 @@ export default function App({ initialData, onDataChange }){
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",textAlign:"center"}}>
                 {hoverSlice!=null&&bCats[hoverSlice]?<div>
                   <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{bCats[hoverSlice].n}</div>
-                  <div style={{fontSize:16,fontWeight:700,color:P.tx,fontFamily:"'JetBrains Mono',monospace"}}>{fm(bCats[hoverSlice].wk)}/wk</div>
+                  <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(bCats[hoverSlice].wk)}/wk</div>
                   <div style={{fontSize:10,color:P.txM}}>{(bCats[hoverSlice].wk/forecast.wkExp*100).toFixed(1)}%</div>
                 </div>:<div>
                   <div style={{fontSize:10,color:P.txD}}>Total</div>
-                  <div style={{fontSize:16,fontWeight:700,color:P.tx,fontFamily:"'JetBrains Mono',monospace"}}>{fm(forecast.wkExp)}/wk</div>
+                  <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(forecast.wkExp)}/wk</div>
                 </div>}
               </div>
               </div>
             </div>
-            <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>By Category</div>
+            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>By Category</div>
               {bCats.map((g,i)=>{
                 const isH=hoverSlice===i;
                 return <div key={g.n} onMouseEnter={()=>setHoverSlice(i)} onMouseLeave={()=>setHoverSlice(null)}
                   style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,cursor:"pointer",
                     opacity:hoverSlice!=null&&!isH?0.4:1,transition:"opacity .15s"}}>
-                  <span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:g.c,flexShrink:0}}/>
-                  <span style={{fontSize:10,color:P.txD,width:85,textAlign:"right",flexShrink:0}}>{g.n}</span>
-                  <div style={{flex:1,height:20,background:P.bg,borderRadius:5,overflow:"hidden"}}>
+                  <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:g.c,flexShrink:0}}/>
+                  <span style={{fontSize:10,color:P.txD,width:100,flexShrink:0}}>{g.n}</span>
+                  <div style={{flex:1,height:20,background:"rgba(255,255,255,0.04)",borderRadius:5,overflow:"hidden"}}>
                     <div style={{height:"100%",width:Math.max(g.wk/bCats[0].wk*100,1)+"%",background:g.c,borderRadius:5,
                       opacity:isH?1:0.7,transition:"width .4s, opacity .15s"}}/>
                   </div>
-                  <span style={{fontSize:10,fontWeight:600,color:P.neg,fontFamily:"'JetBrains Mono',monospace",width:70,textAlign:"right"}}>{fm(g.wk)}</span>
+                  <span style={{fontSize:10,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",width:70,textAlign:"right"}}>{fm(g.wk)}</span>
                   <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right"}}>{(g.wk/forecast.wkExp*100).toFixed(0)}%</span>
                 </div>;
               })}
               <div style={{borderTop:"1px solid "+P.bdL,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between"}}>
                 <span style={{fontSize:10,fontWeight:600,color:P.neg}}>Total</span>
-                <span style={{fontSize:10,fontWeight:700,color:P.neg,fontFamily:"'JetBrains Mono',monospace"}}>{fm(forecast.wkExp)}/wk</span>
+                <span style={{fontSize:10,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(forecast.wkExp)}/wk</span>
               </div>
             </div>
           </div>;
           })()}
-          {/* Expected Income - full width */}
-          <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
-            <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Expected Income</div>
+          {/* Expected Income - full width with accent bars */}
+          <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+            <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Expected Income</div>
             {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;
               const incItems=INC.map(c=>{const b=budgets[c.id];const wk=b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0;return{n:c.n,wk,total:wk*Math.max(wksRem,0)}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
-              const maxI=incItems[0]?incItems[0].total:1;
               return incItems.map(inc=>
-                <div key={inc.n} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:10,color:P.txD,width:110,textAlign:"right",flexShrink:0}}>{inc.n}</span>
-                  <div style={{flex:1,height:16,background:P.bg,borderRadius:4,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:Math.min(inc.total/maxI*100,100)+"%",background:P.pos,borderRadius:4,opacity:0.6}}/>
+                <div key={inc.n} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 0"}}>
+                  <div style={{width:4,height:24,borderRadius:2,background:P.ac,flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:P.tx,fontWeight:500}}>{inc.n}</div>
+                    <div style={{fontSize:10,color:P.txM}}>{fm(inc.wk)}/wk</div>
                   </div>
-                  <span style={{fontSize:10,fontWeight:600,color:P.pos,fontFamily:"'JetBrains Mono',monospace",width:80,textAlign:"right"}}>{fm(inc.total)}</span>
-                  <span style={{fontSize:8,color:P.txM,width:55,textAlign:"right"}}>{fm(inc.wk)}/wk</span>
+                  <span style={{fontSize:13,fontWeight:600,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",textAlign:"right"}}>{fm(inc.total)}</span>
                 </div>
               );
             })()}
             <div style={{borderTop:"1px solid "+P.bdL,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between"}}>
               <span style={{fontSize:10,fontWeight:600,color:P.pos}}>Total ({Math.max(dashEnd-Math.max(dashStart,forecast.lastActual+1)+1,0)} wks)</span>
-              <span style={{fontSize:10,fontWeight:700,color:P.pos,fontFamily:"'JetBrains Mono',monospace"}}>{fm(forecast.wkInc*Math.max(dashEnd-Math.max(dashStart,forecast.lastActual+1)+1,0))}</span>
+              <span style={{fontSize:10,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(forecast.wkInc*Math.max(dashEnd-Math.max(dashStart,forecast.lastActual+1)+1,0))}</span>
             </div>
           </div>
-          {forecast.wkInc===0&&forecast.wkExp===0&&<div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,textAlign:"center"}}>
+          {forecast.wkInc===0&&forecast.wkExp===0&&<div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,textAlign:"center"}}>
             <div style={{fontSize:11,color:P.txM}}>No budgets set yet — click "Set Budgets" above to see the forecast.</div>
           </div>}
         </div>}
@@ -1122,77 +1133,82 @@ export default function App({ initialData, onDataChange }){
         {startWeek!=null&&tab==="insights"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Date Range */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <span style={{fontSize:10,color:P.txD,fontWeight:600}}>Range:</span>
-            <select value={insStart} onChange={e=>setInsStart(+e.target.value)} style={{fontSize:10,padding:"4px 8px",borderRadius:5,border:"1px solid "+P.bd}}>
+            <span style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500}}>Range:</span>
+            <select value={insStart} onChange={e=>setInsStart(+e.target.value)} style={{fontSize:10,padding:"6px 10px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.tx,minHeight:44}}>
               {W.map((d,i)=><option key={i} value={i}>w/e {fd(d)}</option>)}
             </select>
             <span style={{fontSize:10,color:P.txM}}>to</span>
-            <select value={insEnd} onChange={e=>setInsEnd(+e.target.value)} style={{fontSize:10,padding:"4px 8px",borderRadius:5,border:"1px solid "+P.bd}}>
+            <select value={insEnd} onChange={e=>setInsEnd(+e.target.value)} style={{fontSize:10,padding:"6px 10px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.tx,minHeight:44}}>
               {W.map((d,i)=><option key={i} value={i}>w/e {fd(d)}</option>)}
             </select>
             {fys.map(fy=><button key={fy.id} onClick={()=>{setInsStart(fy.start);setInsEnd(fy.end)}}
-              style={{fontSize:9,padding:"3px 8px",borderRadius:4,border:"1px solid "+P.bd,background:insStart===fy.start&&insEnd===fy.end?P.acL:P.card,
-                color:insStart===fy.start&&insEnd===fy.end?P.acD:P.txM,cursor:"pointer"}}>{fy.label}</button>)}
+              style={{fontSize:10,padding:"8px 14px",borderRadius:10,border:insStart===fy.start&&insEnd===fy.end?"none":"1px solid "+P.bd,
+                background:insStart===fy.start&&insEnd===fy.end?P.acL:"transparent",
+                color:insStart===fy.start&&insEnd===fy.end?P.ac:P.txM,cursor:"pointer",fontWeight:500,minHeight:44}}>{fy.label}</button>)}
           </div>
-          {!insights?<div style={{background:P.card,borderRadius:10,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
+          {!insights?<div style={{background:P.card,borderRadius:16,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
             <div style={{fontSize:28,marginBottom:8}}>🔍</div>
             <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>No data to analyse yet</div>
             <div style={{fontSize:11,color:P.txM}}>Import and complete some weeks first</div>
           </div>:<div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {/* Overview */}
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {(()=>{const startBal=rB[insStart]||openingBalance;
-                const endBal=rB[insEnd+1]||(rB.filter(x=>x!=null).pop()||openingBalance);
-                const cf=endBal-startBal;
-                return [{l:"Weeks Analysed",v:insights.nw,fmt:false},
+            {/* Overview - 2x2 grid + standalone Closing Balance */}
+            {(()=>{const startBal=rB[insStart]||openingBalance;
+              const endBal=rB[insEnd+1]||(rB.filter(x=>x!=null).pop()||openingBalance);
+              const cf=endBal-startBal;
+              const stats=[{l:"Weeks Analysed",v:insights.nw,fmt:false},
                 {l:"Opening Balance",v:startBal,g:true},
                 {l:"Avg Net /wk",v:insights.nw?cf/insights.nw:0,g:true},
-                {l:"Net Cashflow",v:cf,g:true},
-                {l:"Closing Balance",v:endBal,g:true}
-              ]})().map(s=><div key={s.l} style={{background:P.card,borderRadius:10,padding:"12px 16px",border:"1px solid "+P.bd,flex:1,minWidth:130}}>
-                <div style={{fontSize:9,color:P.txD,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3}}>{s.l}</div>
-                <div style={{fontSize:18,fontWeight:700,fontFamily:"'JetBrains Mono',monospace",
-                  color:s.fmt===false?P.tx:s.g?(s.v>=0?P.pos:P.neg):s.p?P.pos:P.neg}}>{s.fmt===false?s.v:fm(s.v)}</div>
-              </div>)}
-            </div>
-            {/* Best & Worst Weeks */}
-            <div style={{display:"flex",gap:10}}>
-              <div style={{flex:1,background:P.posL,borderRadius:10,padding:"12px 16px",border:"1px solid "+P.cBd}}>
-                <div style={{fontSize:9,color:P.pos,textTransform:"uppercase",fontWeight:600,marginBottom:4}}>💚 Best Week</div>
+                {l:"Net Cashflow",v:cf,g:true}
+              ];
+              return <>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+                  <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>{s.l}</div>
+                  <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+                    color:s.fmt===false?P.tx:s.g?(s.v>=0?P.pos:P.neg):P.tx}}>{s.fmt===false?s.v:fm(s.v)}</div>
+                </div>)}
+              </div>
+              <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, rgba(74,222,128,0.05) 100%)",borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>Closing Balance</div>
+                <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+                  color:endBal>=0?P.pos:P.neg}}>{fm(endBal)}</div>
+              </div>
+              </>;
+            })()}
+            {/* Best & Worst Weeks - side by side with colored left border */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{background:P.card,borderRadius:16,padding:"12px 16px",border:"1px solid "+P.bd,borderLeft:"3px solid "+P.pos}}>
+                <div style={{fontSize:11,color:P.pos,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500,marginBottom:4}}>✦ Best Week</div>
                 <div style={{fontSize:10,color:P.txD,marginBottom:2}}>{fd(new Date(W[insights.bestWi].getTime()-6*864e5))} – {fd(W[insights.bestWi])}</div>
-                <div style={{fontSize:16,fontWeight:700,color:P.pos,fontFamily:"'JetBrains Mono',monospace"}}>{fm(wT[insights.bestWi].net)} net</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(wT[insights.bestWi].net)} net</div>
                 <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(wT[insights.bestWi].inc)} · Out: {fm(wT[insights.bestWi].exp)}</div>
               </div>
-              <div style={{flex:1,background:P.negL,borderRadius:10,padding:"12px 16px",border:"1px solid #fca5a5"}}>
-                <div style={{fontSize:9,color:P.neg,textTransform:"uppercase",fontWeight:600,marginBottom:4}}>❌ Worst Week</div>
+              <div style={{background:P.card,borderRadius:16,padding:"12px 16px",border:"1px solid "+P.bd,borderLeft:"3px solid "+P.neg}}>
+                <div style={{fontSize:11,color:P.neg,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500,marginBottom:4}}>✕ Worst Week</div>
                 <div style={{fontSize:10,color:P.txD,marginBottom:2}}>{fd(new Date(W[insights.worstWi].getTime()-6*864e5))} – {fd(W[insights.worstWi])}</div>
-                <div style={{fontSize:16,fontWeight:700,color:P.neg,fontFamily:"'JetBrains Mono',monospace"}}>{fm(wT[insights.worstWi].net)} net</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(wT[insights.worstWi].net)} net</div>
                 <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(wT[insights.worstWi].inc)} · Out: {fm(wT[insights.worstWi].exp)}</div>
               </div>
             </div>
-            {/* Weekly Averages */}
-            <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Weekly Averages</div>
-              <div style={{display:"flex",gap:10}}>
-                <div style={{flex:1,textAlign:"center",padding:10,background:P.posL,borderRadius:8}}>
-                  <div style={{fontSize:9,color:P.pos,textTransform:"uppercase"}}>Avg Income</div>
-                  <div style={{fontSize:16,fontWeight:700,color:P.pos,fontFamily:"'JetBrains Mono',monospace"}}>{fm(insights.avgInc)}</div>
-                </div>
-                <div style={{flex:1,textAlign:"center",padding:10,background:P.negL,borderRadius:8}}>
-                  <div style={{fontSize:9,color:P.neg,textTransform:"uppercase"}}>Avg Expenses</div>
-                  <div style={{fontSize:16,fontWeight:700,color:P.neg,fontFamily:"'JetBrains Mono',monospace"}}>{fm(insights.avgExp)}</div>
-                </div>
-                <div style={{flex:1,textAlign:"center",padding:10,background:insights.avgNet>=0?P.posL:P.negL,borderRadius:8}}>
-                  <div style={{fontSize:9,color:insights.avgNet>=0?P.pos:P.neg,textTransform:"uppercase"}}>Avg Net</div>
-                  <div style={{fontSize:16,fontWeight:700,color:insights.avgNet>=0?P.pos:P.neg,fontFamily:"'JetBrains Mono',monospace"}}>{fm(insights.avgNet)}</div>
-                </div>
+            {/* Weekly Averages - pill-shaped containers */}
+            <div style={{display:"flex",gap:10}}>
+              <div style={{flex:1,textAlign:"center",padding:"12px 10px",background:P.posL,borderRadius:20}}>
+                <div style={{fontSize:10,color:P.pos,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500}}>Avg Income</div>
+                <div style={{fontSize:15,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",marginTop:2}}>{fm(insights.avgInc)}</div>
+              </div>
+              <div style={{flex:1,textAlign:"center",padding:"12px 10px",background:P.negL,borderRadius:20}}>
+                <div style={{fontSize:10,color:P.neg,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500}}>Avg Expenses</div>
+                <div style={{fontSize:15,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",marginTop:2}}>{fm(insights.avgExp)}</div>
+              </div>
+              <div style={{flex:1,textAlign:"center",padding:"12px 10px",background:insights.avgNet>=0?P.posL:P.negL,borderRadius:20}}>
+                <div style={{fontSize:10,color:insights.avgNet>=0?P.pos:P.neg,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500}}>Avg Net</div>
+                <div style={{fontSize:15,fontWeight:700,color:insights.avgNet>=0?P.pos:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",marginTop:2}}>{fm(insights.avgNet)}</div>
               </div>
             </div>
-            {/* Spending Trend */}
-            {/* Pie + Bar */}
+            {/* Pie + Bar - By Type with horizontal bars */}
             {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-              <div style={{background:P.card,borderRadius:10,padding:12,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
-                <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
+              <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
+                <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
                 <div style={{position:"relative"}}>
                 <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
                   {insights.grpTotals.reduce((acc,g,i)=>{
@@ -1216,29 +1232,30 @@ export default function App({ initialData, onDataChange }){
                 <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",textAlign:"center"}}>
                   {hoverSlice!=null?<div>
                     <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{insights.grpTotals[hoverSlice].n}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontFamily:"'JetBrains Mono',monospace"}}>{fm(insights.grpTotals[hoverSlice].total)}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpTotals[hoverSlice].total)}</div>
                     <div style={{fontSize:10,color:P.txM}}>{(insights.grpTotals[hoverSlice].total/insights.grpGrand*100).toFixed(1)}%</div>
                   </div>:<div>
                     <div style={{fontSize:10,color:P.txD}}>Total</div>
-                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontFamily:"'JetBrains Mono',monospace"}}>{fm(insights.grpGrand)}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand)}</div>
                   </div>}
                 </div>
                 </div>
               </div>
-              <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
-                <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>By Type</div>
+              <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
+                <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>By Type</div>
                 {insights.grpTotals.map((g,i)=>{
                   const maxT=insights.grpTotals[0]?insights.grpTotals[0].total:1;
                   const isH=hoverSlice===i;
                   return <div key={g.n} onMouseEnter={()=>setHoverSlice(i)} onMouseLeave={()=>setHoverSlice(null)}
                     style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,cursor:"pointer",
                       opacity:hoverSlice!=null&&!isH?0.4:1,transition:"opacity .15s"}}>
-                    <span style={{fontSize:10,color:P.txD,width:85,textAlign:"right",flexShrink:0}}>{g.n}</span>
-                    <div style={{flex:1,height:20,background:P.bg,borderRadius:5,overflow:"hidden"}}>
+                    <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:g.c,flexShrink:0}}/>
+                    <span style={{fontSize:10,color:P.txD,width:100,flexShrink:0}}>{g.n}</span>
+                    <div style={{flex:1,height:20,background:"rgba(255,255,255,0.04)",borderRadius:5,overflow:"hidden"}}>
                       <div style={{height:"100%",width:Math.max(g.total/maxT*100,1)+"%",background:g.c,borderRadius:5,
                         opacity:isH?1:0.7,transition:"width .4s, opacity .15s"}}/>
                     </div>
-                    <span style={{fontSize:10,fontWeight:600,color:P.tx,fontFamily:"'JetBrains Mono',monospace",width:75,textAlign:"right"}}>{fm(g.total)}</span>
+                    <span style={{fontSize:10,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",width:75,textAlign:"right"}}>{fm(g.total)}</span>
                     <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right"}}>{(g.total/insights.grpGrand*100).toFixed(0)}%</span>
                   </div>;
                 })}
@@ -1247,8 +1264,8 @@ export default function App({ initialData, onDataChange }){
             {insights.compWks.length>1&&(()=>{
               const nets=insights.compWks.map(wi=>({wi,net:wT[wi].net}));
               const maxAbs=Math.max(...nets.map(n=>Math.abs(n.net)),1);
-              return <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Weekly Surplus / Deficit</div>
+              return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Weekly Surplus / Deficit</div>
               <div style={{position:"relative"}}>
               <div style={{display:"flex",gap:3,height:120}}>
                 {nets.map((n,i)=>{
@@ -1257,12 +1274,10 @@ export default function App({ initialData, onDataChange }){
                   const isPos=n.net>=0;
                   return <div key={i} onMouseEnter={()=>setHoverBar(i)} onMouseLeave={()=>setHoverBar(null)}
                     style={{flex:1,display:"flex",flexDirection:"column",height:"100%",cursor:"pointer",position:"relative"}}>
-                    {/* Top half (surplus) */}
                     <div style={{flex:1,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
                       {isPos&&<div style={{width:"100%",height:Math.max(h,2)+"%",background:P.pos,borderRadius:"2px 2px 0 0",
                         opacity:isHov?1:0.7,transition:"opacity .15s",outline:isHov?"2px solid "+P.pos:"none"}}/>}
                     </div>
-                    {/* Bottom half (deficit) */}
                     <div style={{flex:1,display:"flex",alignItems:"flex-start",justifyContent:"center",borderTop:"1px solid "+P.bdL}}>
                       {!isPos&&<div style={{width:"100%",height:Math.max(h,2)+"%",background:P.neg,borderRadius:"0 0 2px 2px",
                         opacity:isHov?1:0.7,transition:"opacity .15s",outline:isHov?"2px solid "+P.neg:"none"}}/>}
@@ -1271,8 +1286,8 @@ export default function App({ initialData, onDataChange }){
                 })}
               </div>
               {hoverBar!=null&&nets[hoverBar]&&<div style={{position:"absolute",top:-8,left:"50%",transform:"translateX(-50%)",
-                background:P.tx,color:"#fff",padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
-                fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
+                background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
+                fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
                 {fd(new Date(W[nets[hoverBar].wi].getTime()-6*864e5))}: {fm(nets[hoverBar].net)}
               </div>}
               </div>
@@ -1282,34 +1297,34 @@ export default function App({ initialData, onDataChange }){
               </div>
             </div>;
             })()}
-            {/* Top Expense Categories */}
-            <div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Top Spending Categories</div>
+            {/* Top Expense Categories - with rank badges */}
+            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Top Spending Categories</div>
               {insights.catTotals.slice(0,10).map((ct,i)=>{
-                const maxCt=insights.catTotals[0]?insights.catTotals[0].total:1;
-                return <div key={ct.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:10,color:P.txM,width:16,textAlign:"right"}}>{i+1}.</span>
-                  <span style={{fontSize:10,color:P.txD,width:130,textAlign:"left",flexShrink:0}}>{ct.n} <span style={{color:P.txM,fontSize:8}}>({ct.cat})</span></span>
-                  <div style={{flex:1,height:16,background:P.bg,borderRadius:4,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:Math.min(ct.total/maxCt*100,100)+"%",background:ct.c,borderRadius:4,opacity:0.7}}/>
+                return <div key={ct.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"4px 0"}}>
+                  <div style={{width:24,height:24,borderRadius:6,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:P.txD,flexShrink:0}}>{i+1}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:P.tx,fontWeight:500}}>{ct.n}</div>
+                    <div style={{fontSize:10,color:P.txM}}>{ct.cat}</div>
                   </div>
-                  <span style={{fontSize:10,fontWeight:600,color:P.tx,fontFamily:"'JetBrains Mono',monospace",width:70,textAlign:"right"}}>{fm(ct.total)}</span>
-                  <span style={{fontSize:8,color:P.txM,width:55,textAlign:"right"}}>{fm(ct.avg)}/wk</span>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(ct.total)}</div>
+                    <div style={{fontSize:9,color:P.txM}}>{fm(ct.avg)}/wk</div>
+                  </div>
                 </div>;
               })}
             </div>
-            {/* Income Sources */}
-            {insights.incTotals.length>0&&<div style={{background:P.card,borderRadius:10,padding:16,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:10}}>Income Sources</div>
+            {/* Income Sources - with accent bar indicator */}
+            {insights.incTotals.length>0&&<div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Income Sources</div>
               {insights.incTotals.map(inc=>{
-                const maxI=insights.incTotals[0]?insights.incTotals[0].total:1;
-                return <div key={inc.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:10,color:P.txD,width:110,textAlign:"right",flexShrink:0}}>{inc.n}</span>
-                  <div style={{flex:1,height:16,background:P.bg,borderRadius:4,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:Math.min(inc.total/maxI*100,100)+"%",background:P.pos,borderRadius:4,opacity:0.6}}/>
+                return <div key={inc.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"4px 0"}}>
+                  <div style={{width:4,height:24,borderRadius:2,background:P.ac,flexShrink:0}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,color:P.tx,fontWeight:500}}>{inc.n}</div>
+                    <div style={{fontSize:10,color:P.txM}}>{fm(inc.avg)}/wk</div>
                   </div>
-                  <span style={{fontSize:10,fontWeight:600,color:P.pos,fontFamily:"'JetBrains Mono',monospace",width:80,textAlign:"right"}}>{fm(inc.total)}</span>
-                  <span style={{fontSize:8,color:P.txM,width:55,textAlign:"right"}}>{fm(inc.avg)}/wk</span>
+                  <span style={{fontSize:13,fontWeight:600,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",textAlign:"right"}}>{fm(inc.total)}</span>
                 </div>;
               })}
             </div>}
@@ -1323,26 +1338,26 @@ export default function App({ initialData, onDataChange }){
               <div style={{fontSize:18,fontWeight:700}}>Cashflow</div>
               <div style={{fontSize:10,color:P.txM}}>Categories from imported transactions · Click cells to view details</div>
             </div>
-            <div style={{display:"flex",gap:5}}>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               <button onClick={()=>setSettingsOpen(true)}
-                style={{background:P.bg,border:"1px solid "+P.bd,borderRadius:7,padding:"6px 12px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600}}>⚙ Settings</button>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Settings</button>
               <button onClick={()=>setCatEditorOpen(true)}
-                style={{background:P.bg,border:"1px solid "+P.bd,borderRadius:7,padding:"6px 12px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600}}>✏️ Categories</button>
+                style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Categories</button>
               <button onClick={()=>{setImpOpen(true);setImpStep("upload");setImpWeeks({});setImpWkList([]);setImpCurWk(0)}}
-                style={{background:P.acL,border:"1px solid "+P.ac+"40",borderRadius:7,padding:"6px 12px",color:P.acD,fontSize:10,cursor:"pointer",fontWeight:600}}>📥 Import CSV</button>
+                style={{background:P.acL,border:"none",borderRadius:8,padding:"8px 14px",color:P.ac,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Import CSV</button>
               {accts.length>0&&<button onClick={wipeAll}
-                style={{background:P.negL,border:"1px solid "+P.neg+"40",borderRadius:7,padding:"6px 12px",color:P.neg,fontSize:10,cursor:"pointer",fontWeight:600}}>🗑 Wipe All</button>}
+                style={{background:P.negL,border:"none",borderRadius:8,padding:"8px 14px",color:P.neg,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Wipe All</button>}
             </div>
           </div>
 
           {/* FY sub-tabs */}
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
             {fys.map(fy=><button key={fy.id} onClick={()=>setFyTab(fy.id)}
-              style={{padding:"5px 14px",borderRadius:6,border:"1px solid "+(fyTab===fy.id?P.ac:P.bd),
-                background:fyTab===fy.id?P.acL:P.card,color:fyTab===fy.id?P.acD:P.txD,fontSize:10,fontWeight:600,cursor:"pointer"}}>{fy.label}</button>
+              style={{padding:"8px 18px",borderRadius:10,border:fyTab===fy.id?"none":"1px solid "+P.bd,
+                background:fyTab===fy.id?P.acL:"transparent",color:fyTab===fy.id?P.ac:P.txD,fontSize:10,fontWeight:600,cursor:"pointer",minHeight:44}}>{fy.label}</button>
             )}
-            <button onClick={addYear} style={{padding:"5px 10px",borderRadius:6,border:"1px dashed "+P.bd,
-              background:P.card,color:P.txM,fontSize:10,cursor:"pointer"}}>+ Add Year</button>
+            <button onClick={addYear} style={{padding:"8px 14px",borderRadius:10,border:"1px dashed "+P.bd,
+              background:"rgba(255,255,255,0.03)",color:P.txM,fontSize:10,cursor:"pointer",minHeight:44}}>+ Add Year</button>
           </div>
 
           {(()=>{
@@ -1350,22 +1365,22 @@ export default function App({ initialData, onDataChange }){
             const fyWis=Array.from({length:fy.end-fy.start+1},(_,i)=>fy.start+i);
             const fyOpening=forecast.fBal[fy.start]!=null?forecast.fBal[fy.start]:(rB[fy.start]!=null?rB[fy.start]:openingBalance);
             return accts.length===0?
-            <div style={{background:P.card,borderRadius:10,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
+            <div style={{background:P.card,borderRadius:16,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
               <div style={{fontSize:32,marginBottom:8}}>📂</div>
               <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>No data yet</div>
               <div style={{fontSize:11,color:P.txM}}>Import your BNZ CSV exports to get started</div>
             </div>
           :
-            <div style={{background:P.card,borderRadius:10,border:"1px solid "+P.bd,overflow:"hidden"}}>
+            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
               <div ref={scrollRef} style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
                     <th style={{...stL,padding:"6px 12px",textAlign:"left",fontSize:9,color:P.txM,fontWeight:600,background:P.card,borderBottom:"2px solid "+P.bd,minWidth:130}}>Category</th>
                     {fyWis.map(wi=>{const s=getStat(wi);const st=statStyle(s);const pre=wi<startWeek;
                       return <th key={wi} style={{padding:"5px 6px",textAlign:"center",fontSize:9,fontWeight:600,
-                        background:pre?"#f3f4f6":st.bg,borderBottom:"2px solid "+(pre?"#e5e7eb":st.bd),color:pre?"#d1d5db":s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
+                        background:pre?"rgba(255,255,255,0.02)":st.bg,borderBottom:"2px solid "+(pre?P.bd:st.bd),color:pre?P.txM:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
                         <div>{fd(new Date(W[wi].getTime()-6*864e5))}</div>
-                        <div style={{fontSize:8,fontWeight:400,color:pre?"#d1d5db":P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
+                        <div style={{fontSize:8,fontWeight:400,color:pre?P.txM:P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
                       </th>
                     })}
                   </tr></thead>
@@ -1373,17 +1388,17 @@ export default function App({ initialData, onDataChange }){
                     {/* Opening Balance */}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>Opening Balance</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi]!=null?forecast.fBal[wi]:rB[wi];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:9,color:pre?"#d1d5db":v!=null?(v>=0?P.pos:P.neg):P.txM,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontSize:9,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
                     {/* ── INCOME ── */}
-                    <tr><td style={{...stL,padding:"6px 12px",fontSize:10,fontWeight:700,color:P.pos,background:P.posL+"60",borderBottom:"1px solid "+P.bd,letterSpacing:".04em"}}>INCOME</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:wi<startWeek?"#f3f4f6":P.posL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.pos,background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>INCOME</td>
+                      {fyWis.map(wi=><td key={wi} style={{background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {INC.map(cat=><tr key={cat.id}>
                       <td style={{...stL,padding:"3px 12px 3px 24px",fontSize:10,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{cat.n}</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(cat.id,wi);const iF=getStat(wi)==="f";
-                        return <td key={wi} style={{...cS,color:pre?"#d1d5db":cv.v!=null?P.pos:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,color:pre?P.txM:cv.v!=null?P.pos:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                           {pre?<span style={{fontStyle:"normal"}}>–</span>
                           :<span onClick={()=>onCatCell(cat.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                         </td>
@@ -1391,12 +1406,12 @@ export default function App({ initialData, onDataChange }){
                     </tr>)}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.pos,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Income</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const t=INC.reduce((s,c)=>{const cv=getCatVal(c.id,wi);return s+(cv.v||0)},0);const ap=INC.every(c=>{const cv=getCatVal(c.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":P.pos,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.pos,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── EXPENSE CATEGORIES ── */}
-                    <tr><td style={{...stL,padding:"6px 12px",fontSize:10,fontWeight:700,color:P.neg,background:P.negL+"60",borderBottom:"1px solid "+P.bd,letterSpacing:".04em"}}>EXPENSES</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:wi<startWeek?"#f3f4f6":P.negL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.neg,background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>EXPENSES</td>
+                      {fyWis.map(wi=><td key={wi} style={{background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {ECAT.map(cat=>{
                       const isCollapsed=collCats[cat.n];
                       const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
@@ -1404,19 +1419,19 @@ export default function App({ initialData, onDataChange }){
                       return [
                         <tr key={"g_"+cat.n} style={{cursor:"pointer"}} onClick={()=>setCollCats(p=>({...p,[cat.n]:!p[cat.n]}))}>
                           <td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:600,color:P.tx,borderBottom:"1px solid "+P.bdL,background:P.card}}>
-                            <span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
+                            <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
                             <span style={{fontSize:9,color:P.txM,marginRight:4}}>{isCollapsed?"▶":"▼"}</span>
                             {cat.n}
                           </td>
-                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":v?P.neg:P.txM,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:v?P.neg:P.txM,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                             <span style={{fontStyle:"normal",opacity:pre?0.4:ip&&v?0.65:1}}>{pre?"–":v?fm(v):"–"}</span>
                           </td>})}
                         </tr>,
                         ...(!isCollapsed?cat.items.map(it=>
                           <tr key={it.id}>
-                            <td style={{...stL,padding:"2px 12px 2px 32px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
+                            <td style={{...stL,padding:"2px 12px 2px 28px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
                             {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
-                              return <td key={wi} style={{...cS,fontSize:10,color:pre?"#d1d5db":cv.v!=null?P.neg:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                              return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.neg:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                                 {pre?<span style={{fontStyle:"normal"}}>–</span>
                                 :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                               </td>
@@ -1427,18 +1442,18 @@ export default function App({ initialData, onDataChange }){
                     })}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.neg,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Expenses</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":P.neg,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.neg,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):wT[wi].net;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp);
-                        return <td key={wi} style={{...cS,fontWeight:700,color:pre?"#d1d5db":has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontWeight:700,color:pre?P.txM:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF&&has?0.65:1}}>{pre?"–":has?fm(n):"–"}</span></td>})}
                     </tr>
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,fontWeight:600,color:P.txD,borderBottom:"1px solid "+P.bd,background:P.card}}>Closing Balance</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi+1]!=null?forecast.fBal[wi+1]:rB[wi+1];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:pre?"#d1d5db":v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
@@ -1447,7 +1462,7 @@ export default function App({ initialData, onDataChange }){
                       <td style={{...stL,padding:"4px 12px",background:P.card,borderBottom:"1px solid "+P.bd}}></td>
                       {fyWis.map(wi=>{
                         const pre=wi<startWeek;const s=getStat(wi);const done=comp[wi];const has=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
-                        if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:"#f3f4f6",borderBottom:"1px solid "+P.bd}}/>;
+                        if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>;
                         return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:statStyle(s).bg,borderBottom:"1px solid "+P.bd}}>
                           {!done&&has&&<button onClick={()=>wipeWeek(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,borderRadius:3,cursor:"pointer",marginRight:2}}>Wipe</button>}
                           {!done?<button onClick={()=>doComp(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.pos+"40",background:P.posL,color:P.pos,borderRadius:3,cursor:"pointer"}}>✓ Done</button>
@@ -1475,7 +1490,7 @@ export default function App({ initialData, onDataChange }){
                           {a.name}
                         </td>
                         {fyWis.map(wi=>{const pre=wi<startWeek;const v=acctData[a.id]&&acctData[a.id][wi];
-                          return <td key={wi} style={{...cS,fontSize:10,color:pre?"#d1d5db":v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg,minWidth:85}}>
+                          return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg,minWidth:85}}>
                             {pre?<span style={{opacity:0.4}}>–</span>
                             :<span onClick={()=>onAcctCell(a.id,wi)} style={{cursor:"pointer"}}>{v!=null?(v>=0?"+":"")+v.toFixed(2):"–"}</span>}
                           </td>
@@ -1491,8 +1506,8 @@ export default function App({ initialData, onDataChange }){
       </div>
 
       {/* ═══ CATEGORY EDITOR MODAL ═══ */}
-      {catEditorOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
-        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:600,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+      {catEditorOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:600,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Edit Categories</div>
             <button onClick={()=>setCatEditorOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
@@ -1503,87 +1518,87 @@ export default function App({ initialData, onDataChange }){
             <div style={{fontSize:12,fontWeight:700,color:P.pos,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Income</div>
             {INC.map((cat,i)=><div key={cat.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
               <input value={cat.n} onChange={e=>{const v=e.target.value;setINC(p=>p.map((c,j)=>j===i?{...c,n:v}:c))}}
-                style={{flex:1,fontSize:11,padding:"5px 8px",border:"1px solid "+P.bd,borderRadius:5,background:P.bg}}/>
-              <span style={{fontSize:8,color:P.txM,fontFamily:"'JetBrains Mono',monospace"}}>{cat.id}</span>
+                style={{flex:1,fontSize:11,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
+              <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{cat.id}</span>
               <button onClick={()=>setINC(p=>p.filter((_,j)=>j!==i))}
                 style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
             </div>)}
             <button onClick={()=>{const id="i"+Date.now().toString(36).slice(-3);setINC(p=>[...p,{id,n:"New Income"}])}}
-              style={{fontSize:10,padding:"4px 10px",borderRadius:5,border:"1px dashed "+P.bd,background:P.card,color:P.pos,cursor:"pointer",marginTop:4}}>+ Add Income Category</button>
+              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.pos,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Income Category</button>
           </div>
 
           {/* Expense Type Groups */}
           <div>
             <div style={{fontSize:12,fontWeight:700,color:P.neg,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Expenses</div>
-            {ECAT.map((grp,gi)=><div key={grp.n+gi} style={{marginBottom:12,background:P.bg,borderRadius:8,padding:10,border:"1px solid "+P.bdL}}>
+            {ECAT.map((grp,gi)=><div key={grp.n+gi} style={{marginBottom:12,background:"rgba(255,255,255,0.02)",borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                 <input type="color" value={grp.c} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,c:v}:g))}}
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
                 <input value={grp.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,n:v}:g))}}
-                  style={{flex:1,fontSize:12,fontWeight:600,padding:"4px 8px",border:"1px solid "+P.bd,borderRadius:5,background:P.card}}/>
+                  style={{flex:1,fontSize:12,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
                 <button onClick={()=>setECAT(p=>p.filter((_,j)=>j!==gi))}
                   style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove type">✕</button>
               </div>
               {grp.items.map((it,ii)=><div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
-                  style={{flex:1,fontSize:10,padding:"4px 8px",border:"1px solid "+P.bd,borderRadius:4,background:P.card}}/>
-                <span style={{fontSize:8,color:P.txM,fontFamily:"'JetBrains Mono',monospace"}}>{it.id}</span>
+                  style={{flex:1,fontSize:10,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
+                <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{it.id}</span>
                 <button onClick={()=>setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
               </div>)}
               <button onClick={()=>{const id="e"+Date.now().toString(36).slice(-4);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:[...g.items,{id,n:"New Category"}]}:g))}}
-                style={{fontSize:9,padding:"3px 8px",borderRadius:4,border:"1px dashed "+P.bd,background:P.card,color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
+                style={{fontSize:9,padding:"6px 10px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
             </div>)}
             <button onClick={()=>{const c=CAT_COLORS[ECAT.length%CAT_COLORS.length];setECAT(p=>[...p,{n:"New Type",c,items:[{id:"e"+Date.now().toString(36).slice(-4),n:"New Category"}]}])}}
-              style={{fontSize:10,padding:"5px 12px",borderRadius:5,border:"1px dashed "+P.bd,background:P.card,color:P.neg,cursor:"pointer",marginTop:4}}>+ Add Expense Type</button>
+              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Type</button>
           </div>
 
           <div style={{borderTop:"1px solid "+P.bdL,marginTop:16,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={{fontSize:9,color:P.txM}}>Changes save automatically. Removing a category won't delete its data.</span>
             <button onClick={()=>setCatEditorOpen(false)}
-              style={{padding:"6px 16px",borderRadius:6,border:"none",background:P.ac,color:"#fff",fontSize:11,fontWeight:600,cursor:"pointer"}}>Done</button>
+              style={{padding:"8px 18px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Done</button>
           </div>
         </div>
       </div>}
 
       {/* ═══ CELL DETAIL MODAL ═══ */}
-      {cellDetail!=null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
-        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:550,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+      {cellDetail!=null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:550,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
               <div style={{fontSize:15,fontWeight:700}}>{cdCat?cdCat.n:cdIsAcct?accts.find(a=>a.id===cellDetail.id)?.name:cellDetail.id}</div>
               <div style={{fontSize:10,color:P.txD}}>Week of {fd(new Date(W[cellDetail.wi].getTime()-6*864e5))}</div>
             </div>
-            <div style={{fontSize:18,fontWeight:700,color:cdVal!=null?(INC_IDS.has(cellDetail.id)||cdIsAcct?(cdVal>=0?P.pos:P.neg):P.neg):P.txM,fontFamily:"'JetBrains Mono',monospace"}}>{cdVal!=null?fm(cdVal):"—"}</div>
+            <div style={{fontSize:18,fontWeight:700,color:cdVal!=null?(INC_IDS.has(cellDetail.id)||cdIsAcct?(cdVal>=0?P.pos:P.neg):P.neg):P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{cdVal!=null?fm(cdVal):"—"}</div>
           </div>
 
           {cdTxns.length>0&&<div>
             <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Transactions ({cdTxns.length})</div>
             <div style={{borderRadius:7,border:"1px solid "+P.bd,overflow:"hidden",maxHeight:250,overflowY:"auto"}}>
               {cdTxns.map((t,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderBottom:idx<cdTxns.length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
-                <div style={{flex:"0 0 48px",color:P.txD,fontFamily:"'JetBrains Mono',monospace",fontSize:9}}>{t.date}</div>
-                <div style={{flex:"0 0 70px",textAlign:"right",color:t.amt>=0?P.pos:P.neg,fontWeight:600,fontFamily:"'JetBrains Mono',monospace"}}>
+                <div style={{flex:"0 0 48px",color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9}}>{t.date}</div>
+                <div style={{flex:"0 0 70px",textAlign:"right",color:t.amt>=0?P.pos:P.neg,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>
                   {(t.amt>=0?"+":"")+t.amt.toFixed(2)}
                 </div>
                 <div style={{flex:1,color:P.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.payee}{t.particulars?" · "+t.particulars:""}</div>
                 {cellDetail.isCat&&!cdIsAcct&&<select value={cellDetail.id} onChange={e=>{reCatTxn(cellDetail.wi,cellDetail.id,idx,e.target.value);setCellDetail(null)}}
-                  style={{fontSize:8,padding:"2px 4px",border:"1px solid "+P.bd,borderRadius:3,background:P.bg,color:P.txD}}>
+                  style={{fontSize:8,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:6,background:P.card,color:P.tx}}>
                   {ALL_CATS.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}
                 </select>}
               </div>)}
             </div>
           </div>}
-          {cdTxns.length===0&&<div style={{padding:14,background:P.bg,borderRadius:7,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
+          {cdTxns.length===0&&<div style={{padding:14,background:"rgba(255,255,255,0.02)",borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
-            <button onClick={()=>setCellDetail(null)} style={{padding:"6px 16px",borderRadius:7,border:"1px solid "+P.bd,background:P.bg,color:P.txD,fontSize:11,cursor:"pointer"}}>Close</button>
+            <button onClick={()=>setCellDetail(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Close</button>
           </div>
         </div>
       </div>}
 
       {/* ═══ IMPORT MODAL ═══ */}
-      {impOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
-        <div style={{background:P.card,borderRadius:14,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+      {impOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+        <div style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
 
           {impStep==="upload"&&<div>
             <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Import BNZ Statements</div>
@@ -1595,7 +1610,7 @@ export default function App({ initialData, onDataChange }){
               <input type="file" accept=".csv" multiple style={{display:"none"}} onChange={e=>{if(e.target.files.length)parseCSVs(e.target.files)}}/>
             </label>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-              <button onClick={()=>setImpOpen(false)} style={{padding:"6px 16px",borderRadius:7,border:"1px solid "+P.bd,background:P.bg,color:P.txD,fontSize:11,cursor:"pointer"}}>Cancel</button>
+              <button onClick={()=>setImpOpen(false)} style={{padding:"6px 16px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
             </div>
           </div>}
 
@@ -1611,7 +1626,7 @@ export default function App({ initialData, onDataChange }){
               {[{l:"In",v:revTotalIn,c:P.pos},{l:"Out",v:revTotalOut,c:P.neg},{l:"Net",v:revTotalIn-revTotalOut,c:revTotalIn-revTotalOut>=0?P.pos:P.neg},{l:"Txns",v:curImpTxns.length,c:P.tx}].map(s=>
                 <div key={s.l} style={{flex:1,background:P.bg,borderRadius:7,padding:"6px 8px",textAlign:"center"}}>
                   <div style={{fontSize:8,color:P.txM,textTransform:"uppercase"}}>{s.l}</div>
-                  <div style={{fontSize:13,fontWeight:700,color:s.c,fontFamily:"'JetBrains Mono',monospace"}}>{typeof s.v==="number"&&s.l!=="Txns"?fm(s.v):s.v}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{typeof s.v==="number"&&s.l!=="Txns"?fm(s.v):s.v}</div>
                 </div>
               )}
             </div>
@@ -1627,12 +1642,12 @@ export default function App({ initialData, onDataChange }){
                   {curImpTxns.map((t,i)=>{
                     const ta=accts.find(a=>a.id===t.acctId);
                     return <tr key={i} style={{borderTop:"1px solid "+P.bdL}}>
-                      <td style={{padding:"4px 6px",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:P.txD}}>{t.date}</td>
+                      <td style={{padding:"4px 6px",fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9,color:P.txD}}>{t.date}</td>
                       <td style={{padding:"4px 6px",fontSize:9,color:P.txD}}>
                         <span style={{display:"inline-block",width:5,height:5,borderRadius:3,background:ta?ta.color:"#ccc",marginRight:3,verticalAlign:"middle"}}/>
                         {ta?ta.name:t.acctId.slice(-2)}
                       </td>
-                      <td style={{padding:"4px 6px",textAlign:"right",fontFamily:"'JetBrains Mono',monospace",fontWeight:600,color:t.amt>=0?P.pos:P.neg}}>{(t.amt>=0?"+":"")+t.amt.toFixed(2)}</td>
+                      <td style={{padding:"4px 6px",textAlign:"right",fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontWeight:600,color:t.amt>=0?P.pos:P.neg}}>{(t.amt>=0?"+":"")+t.amt.toFixed(2)}</td>
                       <td style={{padding:"4px 6px",color:P.tx,maxWidth:140,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.payee}</td>
                     </tr>;
                   })}
@@ -1641,11 +1656,11 @@ export default function App({ initialData, onDataChange }){
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:12}}>
               <button onClick={()=>{if(impCurWk>0)setImpCurWk(impCurWk-1)}} disabled={impCurWk===0}
-                style={{padding:"6px 14px",borderRadius:7,border:"1px solid "+P.bd,background:P.bg,color:impCurWk>0?P.tx:P.txM,fontSize:11,cursor:impCurWk>0?"pointer":"default"}}>← Prev</button>
+                style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:impCurWk>0?P.tx:P.txM,fontSize:11,cursor:impCurWk>0?"pointer":"default",minHeight:44}}>← Prev</button>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:7,border:"1px solid "+P.bd,background:P.bg,color:P.txD,fontSize:11,cursor:"pointer"}}>Cancel</button>
+                <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
                 <button onClick={applyWeekImport}
-                  style={{padding:"6px 16px",borderRadius:7,border:"none",background:P.ac,color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600}}>
+                  style={{padding:"6px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>
                   {impCurWk<impWkList.length-1?"Confirm & Next →":"Confirm & Finish ✓"}
                 </button>
               </div>
@@ -1656,13 +1671,13 @@ export default function App({ initialData, onDataChange }){
             <div style={{fontSize:36,marginBottom:6}}>🎉</div>
             <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Import Complete!</div>
             <div style={{fontSize:12,color:P.txD,marginBottom:14}}>{impWkList.length} weeks imported</div>
-            <button onClick={()=>setImpOpen(false)} style={{padding:"8px 20px",borderRadius:7,border:"none",background:P.ac,color:"#fff",fontSize:12,cursor:"pointer",fontWeight:600}}>Done</button>
+            <button onClick={()=>setImpOpen(false)} style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:12,cursor:"pointer",fontWeight:600,minHeight:44}}>Done</button>
           </div>}
         </div>
       </div>}
       {/* ═══ SETTINGS MODAL (start week / opening balance) ═══ */}
-      {settingsOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
-        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:460,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+      {settingsOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:460,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Settings</div>
             <button onClick={()=>setSettingsOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
@@ -1688,7 +1703,7 @@ export default function App({ initialData, onDataChange }){
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{fontSize:14,color:P.txM,fontWeight:600}}>$</span>
               <input type="number" step="0.01" value={openingBalance} onChange={e=>setOpeningBalance(Math.round((parseFloat(e.target.value)||0)*100)/100)}
-                style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+                style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx}}/>
             </div>
           </div>
 
@@ -1700,14 +1715,14 @@ export default function App({ initialData, onDataChange }){
 
           <div style={{display:"flex",justifyContent:"flex-end"}}>
             <button onClick={()=>setSettingsOpen(false)}
-              style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.ac,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>Done</button>
+              style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44}}>Done</button>
           </div>
         </div>
       </div>}
 
       {/* ═══ BUDGET EDITOR MODAL ═══ */}
-      {budgetOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
-        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+      {budgetOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Set Budgets</div>
           <div style={{fontSize:11,color:P.txD,marginBottom:14}}>Configure expected amounts. Monthly bills: pick the day they hit. Fortnightly: toggle offset to align with your pay cycle.</div>
 
@@ -1717,7 +1732,7 @@ export default function App({ initialData, onDataChange }){
               <span style={{fontSize:10,color:P.txD,width:130,flexShrink:0}}>{c.n}</span>
               <span style={{fontSize:10,color:P.txM}}>$</span>
               <input type="number" step="0.01" value={b.amt||""} onChange={e=>setBudget(c.id,{amt:e.target.value})}
-                style={{width:75,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:5,fontSize:11,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+                style={{width:75,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:5,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx}}/>
               <select value={b.freq||"w"} onChange={e=>setBudget(c.id,{freq:e.target.value})}
                 style={{padding:"4px 4px",border:"1px solid "+P.bd,borderRadius:5,fontSize:10,background:P.bg,color:P.txD}}>
                 <option value="w">Weekly</option><option value="f">Fortnightly</option>
@@ -1739,7 +1754,7 @@ export default function App({ initialData, onDataChange }){
           <div style={{fontSize:11,fontWeight:600,color:P.neg,marginBottom:6,marginTop:14,textTransform:"uppercase"}}>Expenses</div>
           {ECAT.map(cat=><div key={cat.n}>
             <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:4,marginTop:8}}>
-              <span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
+              <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
               {cat.n}
             </div>
             {cat.items.map(it=>{const b=budgets[it.id]||{};
@@ -1747,7 +1762,7 @@ export default function App({ initialData, onDataChange }){
                 <span style={{fontSize:10,color:P.txD,width:130,flexShrink:0}}>{it.n}</span>
                 <span style={{fontSize:10,color:P.txM}}>$</span>
                 <input type="number" step="0.01" value={b.amt||""} onChange={e=>setBudget(it.id,{amt:e.target.value})}
-                  style={{width:75,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:5,fontSize:11,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+                  style={{width:75,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:5,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx}}/>
                 <select value={b.freq||"w"} onChange={e=>setBudget(it.id,{freq:e.target.value})}
                   style={{padding:"4px 4px",border:"1px solid "+P.bd,borderRadius:5,fontSize:10,background:P.bg,color:P.txD}}>
                   <option value="w">Weekly</option><option value="f">Fortnightly</option>
@@ -1768,8 +1783,8 @@ export default function App({ initialData, onDataChange }){
           </div>)}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,gap:8}}>
-            <button onClick={()=>setBudgets({})} style={{padding:"7px 14px",borderRadius:7,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer"}}>Clear All</button>
-            <button onClick={()=>setBudgetOpen(false)} style={{padding:"7px 18px",borderRadius:7,border:"none",background:P.ac,color:"#fff",fontSize:11,cursor:"pointer",fontWeight:600}}>Done</button>
+            <button onClick={()=>setBudgets({})} style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear All</button>
+            <button onClick={()=>setBudgetOpen(false)} style={{padding:"7px 18px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>Done</button>
           </div>
         </div>
       </div>}
