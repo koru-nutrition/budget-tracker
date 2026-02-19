@@ -632,7 +632,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* Header */}
-      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"nowrap",gap:8,position:"sticky",top:0,zIndex:100,overflow:"auto"}}>
+      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <BudgetIcon size={22}/>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
