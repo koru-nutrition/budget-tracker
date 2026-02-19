@@ -9,7 +9,6 @@ let INIT_W=mkWeeks(INIT_WEEKS,BASE_START);
 const fd=d=>`${d.getDate()} ${d.toLocaleString("en-NZ",{month:"short"})}`;
 const fdr=d=>`${d.getDate()}/${d.getMonth()+1}`;
 const fm=v=>{if(v==null||isNaN(v))return"—";const n=v<0;return(n?"-$":"$")+Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",")};
-const OPENING=359.52;
 const SK="btv3_2";
 
 // ─── Default category definitions ───
@@ -75,8 +74,8 @@ const P={
 const ACCT_COLORS=["#2563eb","#059669","#d97706","#7c3aed","#dc2626","#0891b2","#c026d3","#65a30d","#ea580c","#6366f1"];
 
 // FY boundaries: FY26 ends at week containing March 31
-const FY_SPLIT=23;// week 23 (Mon Mar 30 – Sun Apr 5) is first week of FY27
-const FYS=[{id:"fy26",label:"FY26 (Oct–Mar)",start:0,end:FY_SPLIT-1},{id:"fy27",label:"FY27 (Apr–May)",start:FY_SPLIT,end:30}];
+
+
 
 export default function App({ initialData, onDataChange }){
   const[W,setW]=useState(INIT_W);
@@ -124,6 +123,10 @@ export default function App({ initialData, onDataChange }){
   const[showAccts,setShowAccts]=useState(false);
   const[budgets,setBudgets]=useState({});
   const[budgetOpen,setBudgetOpen]=useState(false);
+  const[startWeek,setStartWeek]=useState(null);// week index where tracking begins
+  const[openingBalance,setOpeningBalance]=useState(0);// balance at start of startWeek
+  const[startSetupOpen,setStartSetupOpen]=useState(false);// show start week setup prompt
+  const[settingsOpen,setSettingsOpen]=useState(false);// edit start week / opening balance
   const[hoverBar,setHoverBar]=useState(null);
   const[hoverSlice,setHoverSlice]=useState(null);
   // This Week tab state
@@ -167,15 +170,17 @@ export default function App({ initialData, onDataChange }){
       if(s.t)setTxnStore(s.t);if(s.cd)setCatData(s.cd);if(s.ct)setCatTxns(s.ct);
       if(s.cm)setCatMap(s.cm);if(s.bu)setBudgets(s.bu);
       if(s.inc)setINC(s.inc);if(s.ecat)setECAT(s.ecat);
+      if(s.sw!=null)setStartWeek(s.sw);
+      if(s.ob!=null)setOpeningBalance(s.ob);
     }
     setReady(true);
   },[]);// eslint-disable-line
   // ─── Save to Firebase (via props) ───
   useEffect(()=>{
     if(!ready)return;
-    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT};
+    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance};
     if(onDataChange)onDataChange(data);
-  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT]);// eslint-disable-line
+  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance]);// eslint-disable-line
 
   // ─── Confetti ───
   useEffect(()=>{
@@ -431,15 +436,17 @@ export default function App({ initialData, onDataChange }){
   }),[acctData,accts]);
 
   const rB=useMemo(()=>{
-    const b=[OPENING];let cont=true;
-    for(let i=0;i<NW;i++){
+    const b=Array(NW+1).fill(null);
+    if(startWeek==null)return b;
+    b[startWeek]=openingBalance;
+    let cont=true;
+    for(let i=startWeek;i<NW;i++){
       const has=accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null);
       if(!has)cont=false;
-      if(cont&&has)b.push(Math.round((b[i]+wT[i].net)*100)/100);
-      else b.push(null);
+      if(cont&&has&&b[i]!=null)b[i+1]=Math.round((b[i]+wT[i].net)*100)/100;
     }
     return b;
-  },[wT,acctData,accts]);
+  },[wT,acctData,accts,startWeek,openingBalance]);
 
   // Category totals per week (for display)
   const catWT=useMemo(()=>W.map((_,wi)=>{
@@ -518,20 +525,21 @@ export default function App({ initialData, onDataChange }){
     INC.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkIncAvg+=freqToWeekly(b.amt,b.freq||"w")});
     AEXP.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkExpAvg+=freqToWeekly(b.amt,b.freq||"w")});
     let lastActual=-1;
-    for(let i=30;i>=0;i--){if(accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null)){lastActual=i;break}}
+    for(let i=NW-1;i>=0;i--){if(accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null)){lastActual=i;break}}
     // Per-week projected category amounts for future
-    const projCat={};// {catId: [31]}
+    const projCat={};// {catId: [NW]}
     ALL_CATS.forEach(c=>{projCat[c.id]=Array(NW).fill(null)});
-    for(let i=0;i<NW;i++){
+    const sw=startWeek!=null?startWeek:0;
+    for(let i=sw;i<NW;i++){
       if(i<=lastActual||comp[i]){fInc[i]=wT[i].inc;fExp[i]=wT[i].exp;continue}
       let wInc=0,wExp=0;
       INC.forEach(c=>{const v=budgetForWeek(budgets[c.id],i);if(v){wInc+=v;projCat[c.id][i]=v}});
       AEXP.forEach(c=>{const v=budgetForWeek(budgets[c.id],i);if(v){wExp+=v;projCat[c.id][i]=v}});
       fInc[i]=wInc;fExp[i]=wExp;
-      const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:OPENING);
+      const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:null);
       if(prev!=null)fBal[i+1]=Math.round((prev+wInc-wExp)*100)/100;
     }
-    for(let i=1;i<=NW;i++){
+    for(let i=Math.max(1,sw);i<=NW;i++){
       if(fBal[i]==null&&fBal[i-1]!=null&&i-1>lastActual){
         fBal[i]=Math.round((fBal[i-1]+fInc[i-1]-fExp[i-1])*100)/100;
       }
@@ -625,7 +633,7 @@ export default function App({ initialData, onDataChange }){
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <span style={{fontSize:16,fontWeight:700,color:P.ac,flexShrink:0}}>💰</span>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
-          {(()=>{
+          {startWeek!=null&&(()=>{
             // Auto-detect: find the FY that contains "today" (curWi)
             const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
             const activeFy=headerFy?fys.find(f=>f.id===headerFy)||autoFy:autoFy;
@@ -639,29 +647,122 @@ export default function App({ initialData, onDataChange }){
             return <>
               <span onClick={cycleNext} style={{fontSize:10,color:P.acD,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{activeFy.label}</span>
               <div style={{display:"flex",gap:1,minWidth:0,flex:"0 1 auto",overflow:"hidden"}}>
-                {fyWis.map(i=>{const s=getStat(i);return <div key={i} style={{minWidth:2,flex:"1 1 5px",height:12,background:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:"#ddd",borderRadius:1,opacity:s==="f"?0.3:0.8}}/>})}
+                {fyWis.map(i=>{const s=getStat(i);const pre=startWeek!=null&&i<startWeek;return <div key={i} style={{minWidth:2,flex:"1 1 5px",height:12,background:pre?"#e5e7eb":s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:"#ddd",borderRadius:1,opacity:pre?0.3:s==="f"?0.3:0.8}}/>})}
               </div>
               <span style={{fontSize:10,color:P.ac,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{fyComp}/{fyWis.length}</span>
             </>;
           })()}
         </div>
-        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+        {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
             <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 16px",borderRadius:8,border:tab===k?"2px solid "+P.ac:"1px solid "+P.bd,
               background:tab===k?P.acL:P.card,color:tab===k?P.acD:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:36}}>{l}</button>
           )}
-        </div>
+        </div>}
       </div>
 
       <div style={{padding:"14px 20px",maxWidth:1400,margin:"0 auto"}}>
 
+        {/* ═══ START WEEK SETUP (shown when no startWeek is set) ═══ */}
+        {startWeek==null&&!startSetupOpen&&(()=>{
+          // Auto-detect current FY to suggest a start week
+          const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
+          return <div style={{maxWidth:480,margin:"40px auto",textAlign:"center"}}>
+            <div style={{background:P.card,borderRadius:16,padding:"36px 32px",border:"1px solid "+P.bd,boxShadow:"0 8px 32px rgba(0,0,0,.06)"}}>
+              <div style={{fontSize:36,marginBottom:12}}>📅</div>
+              <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>Set Up Your Financial Year</div>
+              <div style={{fontSize:12,color:P.txD,marginBottom:20,lineHeight:1.5}}>
+                Choose which week to start tracking from, and enter your opening balance for that week.
+                You can always change this later.
+              </div>
+              <button onClick={()=>setStartSetupOpen(true)}
+                style={{padding:"12px 32px",borderRadius:10,border:"none",background:P.ac,color:"#fff",fontSize:14,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 12px rgba(37,99,235,0.2)"}}>
+                Get Started
+              </button>
+            </div>
+          </div>;
+        })()}
+
+        {startWeek==null&&startSetupOpen&&(()=>{
+          const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
+          const fyWis=Array.from({length:autoFy.end-autoFy.start+1},(_,i)=>autoFy.start+i);
+          return <div style={{maxWidth:480,margin:"40px auto"}}>
+            <div style={{background:P.card,borderRadius:16,padding:"28px 28px",border:"1px solid "+P.bd,boxShadow:"0 8px 32px rgba(0,0,0,.06)"}}>
+              <div style={{fontSize:18,fontWeight:700,marginBottom:4}}>Choose Start Week</div>
+              <div style={{fontSize:11,color:P.txD,marginBottom:16,lineHeight:1.5}}>
+                Select the week you want to start tracking from. Weeks before this will be blank but you can backfill later by changing the start week.
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.txD,marginBottom:4}}>Financial Year</div>
+                <div style={{fontSize:12,color:P.ac,fontWeight:600,background:P.acL,display:"inline-block",padding:"4px 12px",borderRadius:6}}>{autoFy.label}</div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.txD,marginBottom:4}}>Start Week</div>
+                <select id="setupStartWeek" defaultValue={curWi>=0?curWi:autoFy.start}
+                  style={{width:"100%",padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx}}>
+                  {fyWis.map(wi=>{
+                    const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
+                    return <option key={wi} value={wi}>{fd(mon)} – {fd(sun)}{wi===curWi?" (this week)":""}</option>;
+                  })}
+                </select>
+              </div>
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.txD,marginBottom:4}}>Opening Balance</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:13,color:P.txM,fontWeight:600}}>$</span>
+                  <input id="setupOpenBal" type="number" step="0.01" defaultValue="0" placeholder="0.00"
+                    style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+                </div>
+                <div style={{fontSize:10,color:P.txM,marginTop:4}}>Your bank balance at the start of the chosen week</div>
+              </div>
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <button onClick={()=>setStartSetupOpen(false)}
+                  style={{padding:"10px 20px",borderRadius:8,border:"1px solid "+P.bd,background:P.card,color:P.txD,fontSize:12,cursor:"pointer"}}>Back</button>
+                <button onClick={()=>{
+                  const sw=parseInt(document.getElementById("setupStartWeek").value);
+                  const ob=parseFloat(document.getElementById("setupOpenBal").value)||0;
+                  setStartWeek(sw);
+                  setOpeningBalance(Math.round(ob*100)/100);
+                  setStartSetupOpen(false);
+                }}
+                  style={{padding:"10px 24px",borderRadius:8,border:"none",background:P.ac,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",boxShadow:"0 4px 12px rgba(37,99,235,0.2)"}}>
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>;
+        })()}
+
         {/* ═══ THIS WEEK ═══ */}
-        {tab==="week"&&(()=>{
+        {startWeek!=null&&tab==="week"&&(()=>{
           const baseWi=curWi>=0?curWi:0;
           const wi=Math.max(0,Math.min(W.length-1,baseWi+weekOffset));
           const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
           const isCurrentWeek=wi===(curWi>=0?curWi:0);
-          const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:OPENING);
+          const isPreStart=wi<startWeek;
+          if(isPreStart) return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
+            <div style={{textAlign:"center",paddingTop:4}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
+                <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
+                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi<=0?"transparent":P.acL,color:wi<=0?P.txM:P.ac,fontSize:22,fontWeight:700,
+                    cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,flexShrink:0}}>&#8249;</button>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:20,fontWeight:700,color:P.txM}}>Week of {fd(mon)}</div>
+                  <div style={{fontSize:12,color:P.txM,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+                </div>
+                <button onClick={()=>setWeekOffset(o=>o+1)}
+                  style={{width:44,height:44,borderRadius:14,border:"none",background:P.acL,color:P.ac,fontSize:22,fontWeight:700,
+                    cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,flexShrink:0}}>&#8250;</button>
+              </div>
+            </div>
+            <div style={{background:P.card,borderRadius:12,padding:"28px 20px",border:"1px solid "+P.bd,textAlign:"center"}}>
+              <div style={{fontSize:24,marginBottom:8,opacity:0.4}}>📅</div>
+              <div style={{fontSize:14,fontWeight:600,color:P.txM,marginBottom:6}}>Before tracking started</div>
+              <div style={{fontSize:11,color:P.txM,lineHeight:1.5,marginBottom:14}}>This week is before your start week. To backfill data for earlier weeks, update your start week in Settings on the Cashflow tab.</div>
+              <button onClick={()=>setWeekOffset(0)} style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"6px 16px",cursor:"pointer",fontWeight:600}}>Back to this week</button>
+            </div>
+          </div>;
+          const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:openingBalance);
           // Actual data for this week
           const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
           const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
@@ -855,7 +956,7 @@ export default function App({ initialData, onDataChange }){
         })()}
 
         {/* ═══ DASHBOARD (future-focused) ═══ */}
-        {tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {startWeek!=null&&tab==="dash"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Date Range */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <span style={{fontSize:10,color:P.txD,fontWeight:600}}>Range:</span>
@@ -872,9 +973,9 @@ export default function App({ initialData, onDataChange }){
           </div>
           {/* KPI Cards */}
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-            {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;const curBal=rB.filter(x=>x!=null).pop()||OPENING;
+            {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;const curBal=rB.filter(x=>x!=null).pop()||openingBalance;
               const endBal=forecast.fBal[dashEnd+1]!=null?forecast.fBal[dashEnd+1]:null;
-              const startBal=forecast.fBal[dashStart]!=null?forecast.fBal[dashStart]:(rB[dashStart]||OPENING);
+              const startBal=forecast.fBal[dashStart]!=null?forecast.fBal[dashStart]:(rB[dashStart]||openingBalance);
               const futCf=endBal!=null?endBal-startBal:null;
               return [{l:"Weeks in Range",v:dashEnd-dashStart+1,fmt:false},
               {l:"Current Balance",v:curBal,g:true},
@@ -1018,7 +1119,7 @@ export default function App({ initialData, onDataChange }){
 
 
         {/* ═══ INSIGHTS ═══ */}
-        {tab==="insights"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+        {startWeek!=null&&tab==="insights"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
           {/* Date Range */}
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
             <span style={{fontSize:10,color:P.txD,fontWeight:600}}>Range:</span>
@@ -1040,8 +1141,8 @@ export default function App({ initialData, onDataChange }){
           </div>:<div style={{display:"flex",flexDirection:"column",gap:14}}>
             {/* Overview */}
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {(()=>{const startBal=rB[insStart]||OPENING;
-                const endBal=rB[insEnd+1]||(rB.filter(x=>x!=null).pop()||OPENING);
+              {(()=>{const startBal=rB[insStart]||openingBalance;
+                const endBal=rB[insEnd+1]||(rB.filter(x=>x!=null).pop()||openingBalance);
                 const cf=endBal-startBal;
                 return [{l:"Weeks Analysed",v:insights.nw,fmt:false},
                 {l:"Opening Balance",v:startBal,g:true},
@@ -1216,13 +1317,15 @@ export default function App({ initialData, onDataChange }){
         </div>}
 
         {/* ═══ CASHFLOW ═══ */}
-        {tab==="cash"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {startWeek!=null&&tab==="cash"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
             <div>
               <div style={{fontSize:18,fontWeight:700}}>Cashflow</div>
               <div style={{fontSize:10,color:P.txM}}>Categories from imported transactions · Click cells to view details</div>
             </div>
             <div style={{display:"flex",gap:5}}>
+              <button onClick={()=>setSettingsOpen(true)}
+                style={{background:P.bg,border:"1px solid "+P.bd,borderRadius:7,padding:"6px 12px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600}}>⚙ Settings</button>
               <button onClick={()=>setCatEditorOpen(true)}
                 style={{background:P.bg,border:"1px solid "+P.bd,borderRadius:7,padding:"6px 12px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600}}>✏️ Categories</button>
               <button onClick={()=>{setImpOpen(true);setImpStep("upload");setImpWeeks({});setImpWkList([]);setImpCurWk(0)}}
@@ -1245,7 +1348,7 @@ export default function App({ initialData, onDataChange }){
           {(()=>{
             const fy=fys.find(f=>f.id===fyTab)||fys[0];
             const fyWis=Array.from({length:fy.end-fy.start+1},(_,i)=>fy.start+i);
-            const fyOpening=fy.start===0?OPENING:(forecast.fBal[fy.start]!=null?forecast.fBal[fy.start]:rB[fy.start]||OPENING);
+            const fyOpening=forecast.fBal[fy.start]!=null?forecast.fBal[fy.start]:(rB[fy.start]!=null?rB[fy.start]:openingBalance);
             return accts.length===0?
             <div style={{background:P.card,borderRadius:10,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
               <div style={{fontSize:32,marginBottom:8}}>📂</div>
@@ -1258,41 +1361,42 @@ export default function App({ initialData, onDataChange }){
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
                     <th style={{...stL,padding:"6px 12px",textAlign:"left",fontSize:9,color:P.txM,fontWeight:600,background:P.card,borderBottom:"2px solid "+P.bd,minWidth:130}}>Category</th>
-                    {fyWis.map(wi=>{const s=getStat(wi);const st=statStyle(s);
+                    {fyWis.map(wi=>{const s=getStat(wi);const st=statStyle(s);const pre=wi<startWeek;
                       return <th key={wi} style={{padding:"5px 6px",textAlign:"center",fontSize:9,fontWeight:600,
-                        background:st.bg,borderBottom:"2px solid "+st.bd,color:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
+                        background:pre?"#f3f4f6":st.bg,borderBottom:"2px solid "+(pre?"#e5e7eb":st.bd),color:pre?"#d1d5db":s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
                         <div>{fd(new Date(W[wi].getTime()-6*864e5))}</div>
-                        <div style={{fontSize:8,fontWeight:400,color:P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
+                        <div style={{fontSize:8,fontWeight:400,color:pre?"#d1d5db":P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
                       </th>
                     })}
                   </tr></thead>
                   <tbody>
                     {/* Opening Balance */}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>Opening Balance</td>
-                      {fyWis.map(wi=>{const v=forecast.fBal[wi]!=null?forecast.fBal[wi]:rB[wi];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:9,color:v!=null?(v>=0?P.pos:P.neg):P.txM,background:statStyle(getStat(wi)).bg}}>
-                          <span style={{fontStyle:"normal",opacity:isF?0.65:1}}>{v!=null?fm(v):"—"}</span></td>})}
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi]!=null?forecast.fBal[wi]:rB[wi];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
+                        return <td key={wi} style={{...cS,fontSize:9,color:pre?"#d1d5db":v!=null?(v>=0?P.pos:P.neg):P.txM,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                          <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
                     {/* ── INCOME ── */}
                     <tr><td style={{...stL,padding:"6px 12px",fontSize:10,fontWeight:700,color:P.pos,background:P.posL+"60",borderBottom:"1px solid "+P.bd,letterSpacing:".04em"}}>INCOME</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:P.posL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                      {fyWis.map(wi=><td key={wi} style={{background:wi<startWeek?"#f3f4f6":P.posL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {INC.map(cat=><tr key={cat.id}>
                       <td style={{...stL,padding:"3px 12px 3px 24px",fontSize:10,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{cat.n}</td>
-                      {fyWis.map(wi=>{const cv=getCatVal(cat.id,wi);const iF=getStat(wi)==="f";
-                        return <td key={wi} style={{...cS,color:cv.v!=null?P.pos:P.txM,opacity:iF&&!cv.proj?0.55:1,background:statStyle(getStat(wi)).bg}}>
-                          <span onClick={()=>onCatCell(cat.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(cat.id,wi);const iF=getStat(wi)==="f";
+                        return <td key={wi} style={{...cS,color:pre?"#d1d5db":cv.v!=null?P.pos:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                          {pre?<span style={{fontStyle:"normal"}}>–</span>
+                          :<span onClick={()=>onCatCell(cat.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                         </td>
                       })}
                     </tr>)}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.pos,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Income</td>
-                      {fyWis.map(wi=>{const t=INC.reduce((s,c)=>{const cv=getCatVal(c.id,wi);return s+(cv.v||0)},0);const ap=INC.every(c=>{const cv=getCatVal(c.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:P.pos,borderBottom:"1px solid "+P.bd,background:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:ap&&t?0.65:1}}>{t?fm(t):"–"}</span></td>})}
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const t=INC.reduce((s,c)=>{const cv=getCatVal(c.id,wi);return s+(cv.v||0)},0);const ap=INC.every(c=>{const cv=getCatVal(c.id,wi);return cv.v==null||cv.proj});
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":P.pos,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── EXPENSE CATEGORIES ── */}
                     <tr><td style={{...stL,padding:"6px 12px",fontSize:10,fontWeight:700,color:P.neg,background:P.negL+"60",borderBottom:"1px solid "+P.bd,letterSpacing:".04em"}}>EXPENSES</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:P.negL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                      {fyWis.map(wi=><td key={wi} style={{background:wi<startWeek?"#f3f4f6":P.negL+"60",borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {ECAT.map(cat=>{
                       const isCollapsed=collCats[cat.n];
                       const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
@@ -1304,16 +1408,17 @@ export default function App({ initialData, onDataChange }){
                             <span style={{fontSize:9,color:P.txM,marginRight:4}}>{isCollapsed?"▶":"▼"}</span>
                             {cat.n}
                           </td>
-                          {fyWis.map((wi,idx)=>{const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:v?P.neg:P.txM,background:statStyle(getStat(wi)).bg}}>
-                            <span style={{fontStyle:"normal",opacity:ip&&v?0.65:1}}>{v?fm(v):"–"}</span>
+                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":v?P.neg:P.txM,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                            <span style={{fontStyle:"normal",opacity:pre?0.4:ip&&v?0.65:1}}>{pre?"–":v?fm(v):"–"}</span>
                           </td>})}
                         </tr>,
                         ...(!isCollapsed?cat.items.map(it=>
                           <tr key={it.id}>
                             <td style={{...stL,padding:"2px 12px 2px 32px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
-                            {fyWis.map(wi=>{const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
-                              return <td key={wi} style={{...cS,fontSize:10,color:cv.v!=null?P.neg:P.txM,opacity:iF&&!cv.proj?0.55:1,background:statStyle(getStat(wi)).bg}}>
-                                <span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>
+                            {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
+                              return <td key={wi} style={{...cS,fontSize:10,color:pre?"#d1d5db":cv.v!=null?P.neg:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                                {pre?<span style={{fontStyle:"normal"}}>–</span>
+                                :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                               </td>
                             })}
                           </tr>
@@ -1321,27 +1426,28 @@ export default function App({ initialData, onDataChange }){
                       ];
                     })}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.neg,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Expenses</td>
-                      {fyWis.map(wi=>{const t=AEXP.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:P.neg,borderBottom:"1px solid "+P.bd,background:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:ap&&t?0.65:1}}>{t?fm(t):"–"}</span></td>})}
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?"#d1d5db":P.neg,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
-                      {fyWis.map(wi=>{const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):wT[wi].net;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp);
-                        return <td key={wi} style={{...cS,fontWeight:700,color:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:statStyle(getStat(wi)).bg}}>
-                          <span style={{fontStyle:"normal",opacity:isF&&has?0.65:1}}>{has?fm(n):"–"}</span></td>})}
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):wT[wi].net;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp);
+                        return <td key={wi} style={{...cS,fontWeight:700,color:pre?"#d1d5db":has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                          <span style={{fontStyle:"normal",opacity:pre?0.4:isF&&has?0.65:1}}>{pre?"–":has?fm(n):"–"}</span></td>})}
                     </tr>
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,fontWeight:600,color:P.txD,borderBottom:"1px solid "+P.bd,background:P.card}}>Closing Balance</td>
-                      {fyWis.map(wi=>{const v=forecast.fBal[wi+1]!=null?forecast.fBal[wi+1]:rB[wi+1];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:statStyle(getStat(wi)).bg}}>
-                          <span style={{fontStyle:"normal",opacity:isF?0.65:1}}>{v!=null?fm(v):"—"}</span></td>})}
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi+1]!=null?forecast.fBal[wi+1]:rB[wi+1];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
+                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:pre?"#d1d5db":v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg}}>
+                          <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
                     {/* Week actions */}
                     <tr>
                       <td style={{...stL,padding:"4px 12px",background:P.card,borderBottom:"1px solid "+P.bd}}></td>
                       {fyWis.map(wi=>{
-                        const s=getStat(wi);const done=comp[wi];const has=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+                        const pre=wi<startWeek;const s=getStat(wi);const done=comp[wi];const has=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+                        if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:"#f3f4f6",borderBottom:"1px solid "+P.bd}}/>;
                         return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:statStyle(s).bg,borderBottom:"1px solid "+P.bd}}>
                           {!done&&has&&<button onClick={()=>wipeWeek(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,borderRadius:3,cursor:"pointer",marginRight:2}}>Wipe</button>}
                           {!done?<button onClick={()=>doComp(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.pos+"40",background:P.posL,color:P.pos,borderRadius:3,cursor:"pointer"}}>✓ Done</button>
@@ -1368,9 +1474,10 @@ export default function App({ initialData, onDataChange }){
                           <span style={{display:"inline-block",width:6,height:6,borderRadius:3,background:a.color,marginRight:6,verticalAlign:"middle"}}/>
                           {a.name}
                         </td>
-                        {fyWis.map(wi=>{const v=acctData[a.id]&&acctData[a.id][wi];
-                          return <td key={wi} style={{...cS,fontSize:10,color:v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:statStyle(getStat(wi)).bg,minWidth:85}}>
-                            <span onClick={()=>onAcctCell(a.id,wi)} style={{cursor:"pointer"}}>{v!=null?(v>=0?"+":"")+v.toFixed(2):"–"}</span>
+                        {fyWis.map(wi=>{const pre=wi<startWeek;const v=acctData[a.id]&&acctData[a.id][wi];
+                          return <td key={wi} style={{...cS,fontSize:10,color:pre?"#d1d5db":v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:pre?"#f3f4f6":statStyle(getStat(wi)).bg,minWidth:85}}>
+                            {pre?<span style={{opacity:0.4}}>–</span>
+                            :<span onClick={()=>onAcctCell(a.id,wi)} style={{cursor:"pointer"}}>{v!=null?(v>=0?"+":"")+v.toFixed(2):"–"}</span>}
                           </td>
                         })}
                       </tr>)}
@@ -1553,6 +1660,51 @@ export default function App({ initialData, onDataChange }){
           </div>}
         </div>
       </div>}
+      {/* ═══ SETTINGS MODAL (start week / opening balance) ═══ */}
+      {settingsOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:460,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:16,fontWeight:700}}>Settings</div>
+            <button onClick={()=>setSettingsOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:600,color:P.txD,marginBottom:6}}>Start Week</div>
+            <div style={{fontSize:10,color:P.txM,marginBottom:6,lineHeight:1.4}}>
+              The week you started tracking. Weeks before this are greyed out. Move it earlier to backfill data.
+            </div>
+            <select value={startWeek!=null?startWeek:""} onChange={e=>{const v=parseInt(e.target.value);if(!isNaN(v))setStartWeek(v)}}
+              style={{width:"100%",padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx}}>
+              {W.map((d,i)=>{const sun=d;const mon=new Date(sun);mon.setDate(mon.getDate()-6);
+                return <option key={i} value={i}>{fd(mon)} – {fd(sun)}{i===curWi?" (this week)":""}</option>})}
+            </select>
+          </div>
+
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:12,fontWeight:600,color:P.txD,marginBottom:6}}>Opening Balance</div>
+            <div style={{fontSize:10,color:P.txM,marginBottom:6,lineHeight:1.4}}>
+              Your total bank balance at the start of the chosen week. This is the starting point for all balance calculations.
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:14,color:P.txM,fontWeight:600}}>$</span>
+              <input type="number" step="0.01" value={openingBalance} onChange={e=>setOpeningBalance(Math.round((parseFloat(e.target.value)||0)*100)/100)}
+                style={{flex:1,padding:"10px 12px",border:"1px solid "+P.bd,borderRadius:8,fontSize:14,fontFamily:"'JetBrains Mono',monospace",background:P.bg,color:P.tx}}/>
+            </div>
+          </div>
+
+          <div style={{background:P.acL,borderRadius:8,padding:"10px 14px",marginBottom:16}}>
+            <div style={{fontSize:10,color:P.acD,lineHeight:1.5}}>
+              <strong>Tip:</strong> To backfill earlier weeks, move the start week earlier and update the opening balance to match your bank balance at that point.
+            </div>
+          </div>
+
+          <div style={{display:"flex",justifyContent:"flex-end"}}>
+            <button onClick={()=>setSettingsOpen(false)}
+              style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.ac,color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer"}}>Done</button>
+          </div>
+        </div>
+      </div>}
+
       {/* ═══ BUDGET EDITOR MODAL ═══ */}
       {budgetOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.25)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:14,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"0 16px 48px rgba(0,0,0,.12)"}}>
