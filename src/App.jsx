@@ -661,7 +661,7 @@ export default function App({ initialData, onDataChange }){
           const wi=Math.max(0,Math.min(W.length-1,baseWi+weekOffset));
           const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
           const isCurrentWeek=wi===(curWi>=0?curWi:0);
-          const openBal=rB[wi]!=null?rB[wi]:(rB.slice(0,wi+1).filter(x=>x!=null).pop()||OPENING);
+          const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:OPENING);
           // Actual data for this week
           const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
           const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
