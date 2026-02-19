@@ -562,9 +562,9 @@ export default function App({ initialData, onDataChange }){
       ECAT.forEach(cat=>cat.items.forEach(it=>{const v=catData[it.id]&&catData[it.id][wi];if(v!=null)totExp+=v}));
     });
     const avgInc=totInc/nw,avgExp=totExp/nw,avgNet=(totInc-totExp)/nw;
-    // Best/worst weeks
+    // Best/worst weeks (use category-based totals, not account-based, to exclude internal transfers)
     let bestWi=compWks[0],worstWi=compWks[0];
-    compWks.forEach(wi=>{if(wT[wi].net>wT[bestWi].net)bestWi=wi;if(wT[wi].net<wT[worstWi].net)worstWi=wi});
+    compWks.forEach(wi=>{const net=catWT[wi].inc-catWT[wi].exp,bNet=catWT[bestWi].inc-catWT[bestWi].exp,wNet=catWT[worstWi].inc-catWT[worstWi].exp;if(net>bNet)bestWi=wi;if(net<wNet)worstWi=wi});
     // Top expense categories (individual items)
     const catTotals=[];
     ECAT.forEach(cat=>cat.items.forEach(it=>{
@@ -591,7 +591,7 @@ export default function App({ initialData, onDataChange }){
       return{wi,avg};
     });
     return{nw,totInc,totExp,avgInc,avgExp,avgNet,bestWi,worstWi,catTotals,grpTotals,grpGrand,incTotals,trend,compWks};
-  },[comp,wT,catData,insStart,insEnd,NW]);
+  },[comp,catWT,catData,insStart,insEnd,NW]);
 
   // ─── Budget editor helpers ───
   const setBudget=(catId,fields)=>{
@@ -1208,14 +1208,14 @@ export default function App({ initialData, onDataChange }){
               <div style={{background:P.card,borderRadius:16,padding:"12px 16px",border:"1px solid "+P.bd,borderLeft:"3px solid "+P.pos}}>
                 <div style={{fontSize:11,color:P.pos,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500,marginBottom:4}}>✦ Best Week</div>
                 <div style={{fontSize:10,color:P.txD,marginBottom:2}}>{fd(new Date(W[insights.bestWi].getTime()-6*864e5))} – {fd(W[insights.bestWi])}</div>
-                <div style={{fontSize:16,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(wT[insights.bestWi].net)} net</div>
-                <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(wT[insights.bestWi].inc)} · Out: {fm(wT[insights.bestWi].exp)}</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catWT[insights.bestWi].inc-catWT[insights.bestWi].exp)} net</div>
+                <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(catWT[insights.bestWi].inc)} · Out: {fm(catWT[insights.bestWi].exp)}</div>
               </div>
               <div style={{background:P.card,borderRadius:16,padding:"12px 16px",border:"1px solid "+P.bd,borderLeft:"3px solid "+P.neg}}>
                 <div style={{fontSize:11,color:P.neg,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:500,marginBottom:4}}>✕ Worst Week</div>
                 <div style={{fontSize:10,color:P.txD,marginBottom:2}}>{fd(new Date(W[insights.worstWi].getTime()-6*864e5))} – {fd(W[insights.worstWi])}</div>
-                <div style={{fontSize:16,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(wT[insights.worstWi].net)} net</div>
-                <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(wT[insights.worstWi].inc)} · Out: {fm(wT[insights.worstWi].exp)}</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catWT[insights.worstWi].inc-catWT[insights.worstWi].exp)} net</div>
+                <div style={{fontSize:9,color:P.txD,marginTop:2}}>In: {fm(catWT[insights.worstWi].inc)} · Out: {fm(catWT[insights.worstWi].exp)}</div>
               </div>
             </div>
             {/* Weekly Averages - pill-shaped containers */}
