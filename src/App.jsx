@@ -635,7 +635,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* Header */}
-      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <BudgetIcon size={22}/>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
@@ -836,21 +836,21 @@ export default function App({ initialData, onDataChange }){
           };
           return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
             {/* Week header */}
-            <div style={{textAlign:"center",paddingTop:4}}>
+            <div style={{textAlign:"center",paddingTop:4,marginBottom:6}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
-                    flexShrink:0,transition:"all 0.2s ease"}}>&#8249;</button>
+                    flexShrink:0,alignSelf:"center",transition:"all 0.2s ease"}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{minHeight:18,marginBottom:4}}>{isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}</div>
+                  <div style={{height:22,marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center"}}>{isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}</div>
                   <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
                   <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}{!isCurrentWeek&&<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span>}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":"rgba(255,255,255,0.04)",color:wi>=W.length-1?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
-                    flexShrink:0,transition:"all 0.2s ease"}}>&#8250;</button>
+                    flexShrink:0,alignSelf:"center",transition:"all 0.2s ease"}}>&#8250;</button>
               </div>
             </div>
 
