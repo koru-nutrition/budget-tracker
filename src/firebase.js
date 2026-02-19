@@ -54,7 +54,7 @@ export const getUserProfile = async (uid) => {
   }
 };
 
-const setUserProfile = async (uid, data) => {
+export const setUserProfile = async (uid, data) => {
   try {
     await setDoc(doc(db, "users", uid), data, { merge: true });
   } catch (e) {

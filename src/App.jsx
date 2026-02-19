@@ -62,7 +62,7 @@ const FILE_HINTS=[
   ["expenses","po"],["income","io"]
 ];
 
-const P={
+const DARK_P={
   bg:"#0B0F14",card:"#141A22",bd:"rgba(255,255,255,0.06)",bdL:"rgba(255,255,255,0.04)",
   surfHov:"#1A2230",surfAlt:"#111820",
   tx:"#E8ECF1",txD:"#7A8699",txM:"#4A5568",
@@ -72,15 +72,33 @@ const P={
   blue:"#60A5FA",
   cBg:"rgba(74,222,128,0.08)",cBd:"rgba(74,222,128,0.2)",uBg:"rgba(96,165,250,0.08)",uBd:"rgba(96,165,250,0.2)",
   fBg:"#0B0F14",fBd:"rgba(255,255,255,0.06)",sBg:"rgba(251,191,36,0.08)",sBd:"rgba(251,191,36,0.2)",
+  w02:"rgba(255,255,255,0.02)",w03:"rgba(255,255,255,0.03)",w04:"rgba(255,255,255,0.04)",
+  w06:"rgba(255,255,255,0.06)",w10:"rgba(255,255,255,0.1)",w12:"rgba(255,255,255,0.12)",
+  headerBg:"rgba(11,15,20,0.85)",overlayBg:"rgba(0,0,0,.6)",
+};
+const LIGHT_P={
+  bg:"#F5F7FA",card:"#FFFFFF",bd:"rgba(0,0,0,0.08)",bdL:"rgba(0,0,0,0.04)",
+  surfHov:"#E8ECF1",surfAlt:"#EDF0F4",
+  tx:"#1A202C",txD:"#64748B",txM:"#94A3B8",
+  ac:"#16A34A",acL:"rgba(22,163,74,0.1)",acD:"#16A34A",
+  pos:"#16A34A",posL:"rgba(22,163,74,0.1)",neg:"#DC2626",negL:"rgba(220,38,38,0.1)",
+  warn:"#D97706",warnL:"rgba(217,119,6,0.1)",
+  blue:"#2563EB",
+  cBg:"rgba(22,163,74,0.06)",cBd:"rgba(22,163,74,0.2)",uBg:"rgba(37,99,235,0.06)",uBd:"rgba(37,99,235,0.2)",
+  fBg:"#F5F7FA",fBd:"rgba(0,0,0,0.08)",sBg:"rgba(217,119,6,0.06)",sBd:"rgba(217,119,6,0.2)",
+  w02:"rgba(0,0,0,0.02)",w03:"rgba(0,0,0,0.03)",w04:"rgba(0,0,0,0.04)",
+  w06:"rgba(0,0,0,0.06)",w10:"rgba(0,0,0,0.06)",w12:"rgba(0,0,0,0.08)",
+  headerBg:"rgba(245,247,250,0.9)",overlayBg:"rgba(0,0,0,.3)",
 };
 const ACCT_COLORS=["#60A5FA","#4ADE80","#FBBF24","#A78BFA","#F87171","#38BDF8","#E879F9","#34D399","#FB923C","#C084FC"];
-const BudgetIcon=({size=20})=><svg width={size} height={size} viewBox="0 0 100 100" fill="none"><rect x="4" y="4" width="92" height="92" rx="22" fill={P.card} stroke={P.ac} strokeOpacity="0.25" strokeWidth="2"/><line x1="50" y1="24" x2="50" y2="76" stroke={P.ac} strokeWidth="6" strokeLinecap="round"/><path d="M60 38C60 26 40 26 40 38C40 46 60 54 60 62C60 74 40 74 40 62" stroke={P.ac} strokeWidth="6" strokeLinecap="round" fill="none"/></svg>;
 
 // FY boundaries: FY26 ends at week containing March 31
 
 
 
-export default function App({ initialData, onDataChange }){
+export default function App({ initialData, onDataChange, theme }){
+  const P=theme==="light"?LIGHT_P:DARK_P;
+  const BudgetIcon=({size=20})=><svg width={size} height={size} viewBox="0 0 100 100" fill="none"><rect x="4" y="4" width="92" height="92" rx="22" fill={P.card} stroke={P.ac} strokeOpacity="0.25" strokeWidth="2"/><line x1="50" y1="24" x2="50" y2="76" stroke={P.ac} strokeWidth="6" strokeLinecap="round"/><path d="M60 38C60 26 40 26 40 38C40 46 60 54 60 62C60 74 40 74 40 62" stroke={P.ac} strokeWidth="6" strokeLinecap="round" fill="none"/></svg>;
   const[W,setW]=useState(INIT_W);
   const NW=W.length;
   // Categories as state
@@ -635,7 +653,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* Header */}
-      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14,position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:P.headerBg,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"16px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:14,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <BudgetIcon size={22}/>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
@@ -653,7 +671,7 @@ export default function App({ initialData, onDataChange }){
             };
             return <>
               <span onClick={cycleNext} style={{fontSize:10,color:P.ac,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{activeFy.label}</span>
-              <div style={{flex:"0 1 120px",minWidth:40,height:3,background:"rgba(255,255,255,0.06)",borderRadius:2,overflow:"hidden"}}>
+              <div style={{flex:"0 1 120px",minWidth:40,height:3,background:P.w06,borderRadius:2,overflow:"hidden"}}>
                 <div style={{height:"100%",width:pctDone+"%",background:P.ac,borderRadius:2,transition:"width .3s"}}/>
               </div>
               <span style={{fontSize:10,color:P.txD,fontWeight:500,flexShrink:0,whiteSpace:"nowrap"}}>{fyComp}/{fyWis.length}</span>
@@ -662,8 +680,8 @@ export default function App({ initialData, onDataChange }){
         </div>
         {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"nowrap",overflow:"auto"}}>
           {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
-            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid rgba(255,255,255,0.12)":"1px solid transparent",
-              background:tab===k?"rgba(255,255,255,0.1)":"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease",flexShrink:0,whiteSpace:"nowrap"}}>{l}</button>
+            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid "+P.w12:"1px solid transparent",
+              background:tab===k?P.w10:"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease",flexShrink:0,whiteSpace:"nowrap"}}>{l}</button>
           )}
         </div>}
       </div>
@@ -724,7 +742,7 @@ export default function App({ initialData, onDataChange }){
               </div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button onClick={()=>setStartSetupOpen(false)}
-                  style={{padding:"10px 20px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:12,cursor:"pointer",minHeight:44}}>Back</button>
+                  style={{padding:"10px 20px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:12,cursor:"pointer",minHeight:44}}>Back</button>
                 <button onClick={()=>{
                   const sw=parseInt(document.getElementById("setupStartWeek").value);
                   const ob=parseFloat(document.getElementById("setupOpenBal").value)||0;
@@ -751,7 +769,7 @@ export default function App({ initialData, onDataChange }){
             <div style={{textAlign:"center",paddingTop:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":P.w04,color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,flexShrink:0}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{minHeight:18,marginBottom:4}}></div>
@@ -759,7 +777,7 @@ export default function App({ initialData, onDataChange }){
                   <div style={{fontSize:12,color:P.txM,marginTop:2}}>{fd(mon)} – {fd(sun)}<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span></div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)}
-                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.tx,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:P.w04,color:P.tx,fontSize:22,fontWeight:700,
                     cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,flexShrink:0}}>&#8250;</button>
               </div>
             </div>
@@ -839,7 +857,7 @@ export default function App({ initialData, onDataChange }){
             <div style={{textAlign:"center",paddingTop:4,marginBottom:6}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":P.w04,color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
                     flexShrink:0,alignSelf:"center",transition:"all 0.2s ease"}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
@@ -848,7 +866,7 @@ export default function App({ initialData, onDataChange }){
                   <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}{!isCurrentWeek&&<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span>}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
-                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":"rgba(255,255,255,0.04)",color:wi>=W.length-1?P.txM:P.tx,fontSize:22,fontWeight:700,
+                  style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":P.w04,color:wi>=W.length-1?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
                     flexShrink:0,alignSelf:"center",transition:"all 0.2s ease"}}>&#8250;</button>
               </div>
@@ -892,9 +910,9 @@ export default function App({ initialData, onDataChange }){
               {/* Add income button */}
               {!twAddIncOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
                 <button onClick={()=>{setTwAddIncOpen(true);setTwAddIncCat(INC[0]?INC[0].id:"")}}
-                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.pos,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Income</button>
+                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.pos,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Income</button>
               </div>
-              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:"rgba(255,255,255,0.02)"}}>
+              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:P.w02}}>
                 <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Add Income</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <select value={twAddIncCat} onChange={e=>setTwAddIncCat(e.target.value)}
@@ -911,7 +929,7 @@ export default function App({ initialData, onDataChange }){
                   </div>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                     <button onClick={()=>{setTwAddIncOpen(false);setTwAddIncCat("");setTwAddIncAmt("")}}
-                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
                     <button onClick={addIncome}
                       style={{padding:"7px 16px",borderRadius:8,border:"none",background:P.posL,color:P.pos,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add</button>
                   </div>
@@ -927,7 +945,7 @@ export default function App({ initialData, onDataChange }){
               </div>
               {expRows.length>0?expRows.map(grp=>
                 <div key={grp.n}>
-                  <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bdL,background:"rgba(255,255,255,0.02)"}}>
+                  <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bdL,background:P.w02}}>
                     <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:grp.c}}/>
                     <span style={{fontSize:10,fontWeight:600,color:P.txD}}>{grp.n}</span>
                   </div>
@@ -946,7 +964,7 @@ export default function App({ initialData, onDataChange }){
                             onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
                             style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
                           <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
-                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
+                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
                         </div>:<>
                           <span onClick={it.actual!=null?()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}:undefined}
                             style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,
@@ -963,9 +981,9 @@ export default function App({ initialData, onDataChange }){
               {/* Add expense button */}
               {!twAddOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
                 <button onClick={()=>{setTwAddOpen(true);setTwAddCat(AEXP[0]?AEXP[0].id:"")}}
-                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Expense</button>
+                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Expense</button>
               </div>
-              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:"rgba(255,255,255,0.02)"}}>
+              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:P.w02}}>
                 <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Add Expense</div>
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
@@ -982,7 +1000,7 @@ export default function App({ initialData, onDataChange }){
                   </div>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                     <button onClick={()=>{setTwAddOpen(false);setTwAddCat("");setTwAddAmt("");setTwAddNote("")}}
-                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
                     <button onClick={addExpense}
                       style={{padding:"7px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add</button>
                   </div>
@@ -1057,7 +1075,7 @@ export default function App({ initialData, onDataChange }){
           <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
               <div style={{fontSize:15,fontWeight:600}}>Balance Forecast</div>
-              <button onClick={()=>setBudgetOpen(true)} style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",fontWeight:600,minHeight:44}}>Set Budgets</button>
+              <button onClick={()=>setBudgetOpen(true)} style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,cursor:"pointer",fontWeight:600,minHeight:44}}>Set Budgets</button>
             </div>
             {(()=>{
               const count=dashEnd-dashStart+1;
@@ -1166,7 +1184,7 @@ export default function App({ initialData, onDataChange }){
                     opacity:hoverSlice!=null&&!isH?0.4:1,transition:"opacity .15s"}}>
                   <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:g.c,flexShrink:0}}/>
                   <span style={{fontSize:10,color:P.txD,width:100,flexShrink:0}}>{g.n}</span>
-                  <div style={{flex:1,height:20,background:"rgba(255,255,255,0.04)",borderRadius:5,overflow:"hidden"}}>
+                  <div style={{flex:1,height:20,background:P.w04,borderRadius:5,overflow:"hidden"}}>
                     <div style={{height:"100%",width:Math.max(g.wk/bCats[0].wk*100,1)+"%",background:g.c,borderRadius:5,
                       opacity:isH?1:0.7,transition:"width .4s, opacity .15s"}}/>
                   </div>
@@ -1330,7 +1348,7 @@ export default function App({ initialData, onDataChange }){
                       opacity:hoverSlice!=null&&!isH?0.4:1,transition:"opacity .15s"}}>
                     <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:g.c,flexShrink:0}}/>
                     <span style={{fontSize:10,color:P.txD,width:100,flexShrink:0}}>{g.n}</span>
-                    <div style={{flex:1,height:20,background:"rgba(255,255,255,0.04)",borderRadius:5,overflow:"hidden"}}>
+                    <div style={{flex:1,height:20,background:P.w04,borderRadius:5,overflow:"hidden"}}>
                       <div style={{height:"100%",width:Math.max(g.total/maxT*100,1)+"%",background:g.c,borderRadius:5,
                         opacity:isH?1:0.7,transition:"width .4s, opacity .15s"}}/>
                     </div>
@@ -1381,7 +1399,7 @@ export default function App({ initialData, onDataChange }){
               <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Top Spending Categories</div>
               {insights.catTotals.slice(0,10).map((ct,i)=>{
                 return <div key={ct.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"4px 0"}}>
-                  <div style={{width:24,height:24,borderRadius:6,background:"rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:P.txD,flexShrink:0}}>{i+1}</div>
+                  <div style={{width:24,height:24,borderRadius:6,background:P.w06,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:P.txD,flexShrink:0}}>{i+1}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:P.tx,fontWeight:500}}>{ct.n}</div>
                     <div style={{fontSize:10,color:P.txM}}>{ct.cat}</div>
@@ -1419,9 +1437,9 @@ export default function App({ initialData, onDataChange }){
             </div>
             <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
               <button onClick={()=>setSettingsOpen(true)}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Settings</button>
+                style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Settings</button>
               <button onClick={()=>setCatEditorOpen(true)}
-                style={{background:"rgba(255,255,255,0.04)",border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Categories</button>
+                style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Categories</button>
               <button onClick={()=>{setImpOpen(true);setImpStep("upload");setImpWeeks({});setImpWkList([]);setImpCurWk(0)}}
                 style={{background:P.acL,border:"none",borderRadius:8,padding:"8px 14px",color:P.ac,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Import CSV</button>
               {accts.length>0&&<button onClick={wipeAll}
@@ -1436,7 +1454,7 @@ export default function App({ initialData, onDataChange }){
                 background:fyTab===fy.id?P.acL:"transparent",color:fyTab===fy.id?P.ac:P.txD,fontSize:10,fontWeight:600,cursor:"pointer",minHeight:44}}>{fy.label}</button>
             )}
             <button onClick={addYear} style={{padding:"8px 14px",borderRadius:10,border:"1px dashed "+P.bd,
-              background:"rgba(255,255,255,0.03)",color:P.txM,fontSize:10,cursor:"pointer",minHeight:44}}>+ Add Year</button>
+              background:P.w03,color:P.txM,fontSize:10,cursor:"pointer",minHeight:44}}>+ Add Year</button>
           </div>
 
           {(()=>{
@@ -1457,7 +1475,7 @@ export default function App({ initialData, onDataChange }){
                     <th style={{...stL,padding:"6px 12px",textAlign:"left",fontSize:9,color:P.txM,fontWeight:600,background:P.card,borderBottom:"2px solid "+P.bd,minWidth:130}}>Category</th>
                     {fyWis.map(wi=>{const s=getStat(wi);const st=statStyle(s);const pre=wi<startWeek;
                       return <th key={wi} style={{padding:"5px 6px",textAlign:"center",fontSize:9,fontWeight:600,
-                        background:pre?"rgba(255,255,255,0.02)":st.bg,borderBottom:"2px solid "+(pre?P.bd:st.bd),color:pre?P.txM:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
+                        background:pre?P.w02:st.bg,borderBottom:"2px solid "+(pre?P.bd:st.bd),color:pre?P.txM:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
                         <div>{fd(new Date(W[wi].getTime()-6*864e5))}</div>
                         <div style={{fontSize:8,fontWeight:400,color:pre?P.txM:P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
                       </th>
@@ -1467,17 +1485,17 @@ export default function App({ initialData, onDataChange }){
                     {/* Opening Balance */}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>Opening Balance</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi]!=null?forecast.fBal[wi]:rB[wi];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:9,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontSize:9,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
                     {/* ── INCOME ── */}
-                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.pos,background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>INCOME</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.pos,background:P.w02,borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>INCOME</td>
+                      {fyWis.map(wi=><td key={wi} style={{background:P.w02,borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {INC.map(cat=><tr key={cat.id}>
                       <td style={{...stL,padding:"3px 12px 3px 24px",fontSize:10,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{cat.n}</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(cat.id,wi);const iF=getStat(wi)==="f";
-                        return <td key={wi} style={{...cS,color:pre?P.txM:cv.v!=null?P.pos:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,color:pre?P.txM:cv.v!=null?P.pos:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           {pre?<span style={{fontStyle:"normal"}}>–</span>
                           :<span onClick={()=>onCatCell(cat.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                         </td>
@@ -1485,12 +1503,12 @@ export default function App({ initialData, onDataChange }){
                     </tr>)}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.pos,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Income</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const t=INC.reduce((s,c)=>{const cv=getCatVal(c.id,wi);return s+(cv.v||0)},0);const ap=INC.every(c=>{const cv=getCatVal(c.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.pos,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.pos,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── EXPENSE CATEGORIES ── */}
-                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.neg,background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>EXPENSES</td>
-                      {fyWis.map(wi=><td key={wi} style={{background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.neg,background:P.w02,borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>EXPENSES</td>
+                      {fyWis.map(wi=><td key={wi} style={{background:P.w02,borderBottom:"1px solid "+P.bd}}/>)}</tr>
                     {ECAT.map(cat=>{
                       const isCollapsed=collCats[cat.n];
                       const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
@@ -1502,7 +1520,7 @@ export default function App({ initialData, onDataChange }){
                             <span style={{fontSize:9,color:P.txM,marginRight:4}}>{isCollapsed?"▶":"▼"}</span>
                             {cat.n}
                           </td>
-                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:v?P.neg:P.txM,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:v?P.neg:P.txM,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                             <span style={{fontStyle:"normal",opacity:pre?0.4:ip&&v?0.65:1}}>{pre?"–":v?fm(v):"–"}</span>
                           </td>})}
                         </tr>,
@@ -1510,7 +1528,7 @@ export default function App({ initialData, onDataChange }){
                           <tr key={it.id}>
                             <td style={{...stL,padding:"2px 12px 2px 28px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
                             {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
-                              return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.neg:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                              return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.neg:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                                 {pre?<span style={{fontStyle:"normal"}}>–</span>
                                 :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                               </td>
@@ -1521,18 +1539,18 @@ export default function App({ initialData, onDataChange }){
                     })}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.neg,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Expenses</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
-                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.neg,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.neg,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):wT[wi].net;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp);
-                        return <td key={wi} style={{...cS,fontWeight:700,color:pre?P.txM:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontWeight:700,color:pre?P.txM:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF&&has?0.65:1}}>{pre?"–":has?fm(n):"–"}</span></td>})}
                     </tr>
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:9,fontWeight:600,color:P.txD,borderBottom:"1px solid "+P.bd,background:P.card}}>Closing Balance</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const v=forecast.fBal[wi+1]!=null?forecast.fBal[wi+1]:rB[wi+1];const isF=wi>forecast.lastActual&&!comp[wi]&&v!=null;
-                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg}}>
+                        return <td key={wi} style={{...cS,fontSize:10,fontWeight:700,color:pre?P.txM:v!=null?(v>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF?0.65:1}}>{pre?"—":v!=null?fm(v):"—"}</span></td>})}
                     </tr>
 
@@ -1541,7 +1559,7 @@ export default function App({ initialData, onDataChange }){
                       <td style={{...stL,padding:"4px 12px",background:P.card,borderBottom:"1px solid "+P.bd}}></td>
                       {fyWis.map(wi=>{
                         const pre=wi<startWeek;const s=getStat(wi);const done=comp[wi];const has=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
-                        if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:"rgba(255,255,255,0.02)",borderBottom:"1px solid "+P.bd}}/>;
+                        if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:P.w02,borderBottom:"1px solid "+P.bd}}/>;
                         return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:statStyle(s).bg,borderBottom:"1px solid "+P.bd}}>
                           {!done&&has&&<button onClick={()=>wipeWeek(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,borderRadius:3,cursor:"pointer",marginRight:2}}>Wipe</button>}
                           {!done?<button onClick={()=>doComp(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.pos+"40",background:P.posL,color:P.pos,borderRadius:3,cursor:"pointer"}}>✓ Done</button>
@@ -1569,7 +1587,7 @@ export default function App({ initialData, onDataChange }){
                           {a.name}
                         </td>
                         {fyWis.map(wi=>{const pre=wi<startWeek;const v=acctData[a.id]&&acctData[a.id][wi];
-                          return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:pre?"rgba(255,255,255,0.02)":statStyle(getStat(wi)).bg,minWidth:85}}>
+                          return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:v==null?P.txM:v>0?P.pos:v<0?P.neg:P.tx,background:pre?P.w02:statStyle(getStat(wi)).bg,minWidth:85}}>
                             {pre?<span style={{opacity:0.4}}>–</span>
                             :<span onClick={()=>onAcctCell(a.id,wi)} style={{cursor:"pointer"}}>{v!=null?(v>=0?"+":"")+v.toFixed(2):"–"}</span>}
                           </td>
@@ -1585,7 +1603,7 @@ export default function App({ initialData, onDataChange }){
       </div>
 
       {/* ═══ CATEGORY EDITOR MODAL ═══ */}
-      {catEditorOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
+      {catEditorOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:600,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Edit Categories</div>
@@ -1603,13 +1621,13 @@ export default function App({ initialData, onDataChange }){
                 style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
             </div>)}
             <button onClick={()=>{const id="i"+Date.now().toString(36).slice(-3);setINC(p=>[...p,{id,n:"New Income"}])}}
-              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.pos,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Income Category</button>
+              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.pos,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Income Category</button>
           </div>
 
           {/* Expense Type Groups */}
           <div>
             <div style={{fontSize:12,fontWeight:700,color:P.neg,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Expenses</div>
-            {ECAT.map((grp,gi)=><div key={grp.n+gi} style={{marginBottom:12,background:"rgba(255,255,255,0.02)",borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
+            {ECAT.map((grp,gi)=><div key={grp.n+gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                 <input type="color" value={grp.c} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,c:v}:g))}}
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
@@ -1626,10 +1644,10 @@ export default function App({ initialData, onDataChange }){
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
               </div>)}
               <button onClick={()=>{const id="e"+Date.now().toString(36).slice(-4);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:[...g.items,{id,n:"New Category"}]}:g))}}
-                style={{fontSize:9,padding:"6px 10px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
+                style={{fontSize:9,padding:"6px 10px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
             </div>)}
             <button onClick={()=>{const c=CAT_COLORS[ECAT.length%CAT_COLORS.length];setECAT(p=>[...p,{n:"New Type",c,items:[{id:"e"+Date.now().toString(36).slice(-4),n:"New Category"}]}])}}
-              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Type</button>
+              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Type</button>
           </div>
 
           <div style={{borderTop:"1px solid "+P.bdL,marginTop:16,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1641,7 +1659,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* ═══ CELL DETAIL MODAL ═══ */}
-      {cellDetail!=null&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
+      {cellDetail!=null&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:550,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
@@ -1667,16 +1685,16 @@ export default function App({ initialData, onDataChange }){
               </div>)}
             </div>
           </div>}
-          {cdTxns.length===0&&<div style={{padding:14,background:"rgba(255,255,255,0.02)",borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
+          {cdTxns.length===0&&<div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
-            <button onClick={()=>setCellDetail(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Close</button>
+            <button onClick={()=>setCellDetail(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Close</button>
           </div>
         </div>
       </div>}
 
       {/* ═══ IMPORT MODAL ═══ */}
-      {impOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+      {impOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
         <div style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
 
           {impStep==="upload"&&<div>
@@ -1689,7 +1707,7 @@ export default function App({ initialData, onDataChange }){
               <input type="file" accept=".csv" multiple style={{display:"none"}} onChange={e=>{if(e.target.files.length)parseCSVs(e.target.files)}}/>
             </label>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-              <button onClick={()=>setImpOpen(false)} style={{padding:"6px 16px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+              <button onClick={()=>setImpOpen(false)} style={{padding:"6px 16px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
             </div>
           </div>}
 
@@ -1735,9 +1753,9 @@ export default function App({ initialData, onDataChange }){
             </div>
             <div style={{display:"flex",justifyContent:"space-between",marginTop:12}}>
               <button onClick={()=>{if(impCurWk>0)setImpCurWk(impCurWk-1)}} disabled={impCurWk===0}
-                style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:impCurWk>0?P.tx:P.txM,fontSize:11,cursor:impCurWk>0?"pointer":"default",minHeight:44}}>← Prev</button>
+                style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:impCurWk>0?P.tx:P.txM,fontSize:11,cursor:impCurWk>0?"pointer":"default",minHeight:44}}>← Prev</button>
               <div style={{display:"flex",gap:5}}>
-                <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
                 <button onClick={applyWeekImport}
                   style={{padding:"6px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>
                   {impCurWk<impWkList.length-1?"Confirm & Next →":"Confirm & Finish ✓"}
@@ -1755,7 +1773,7 @@ export default function App({ initialData, onDataChange }){
         </div>
       </div>}
       {/* ═══ SETTINGS MODAL (start week / opening balance) ═══ */}
-      {settingsOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
+      {settingsOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:460,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Settings</div>
@@ -1800,7 +1818,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* ═══ BUDGET EDITOR MODAL ═══ */}
-      {budgetOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
+      {budgetOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Set Budgets</div>
           <div style={{fontSize:11,color:P.txD,marginBottom:14}}>Configure expected amounts. Monthly bills: pick the day they hit. Fortnightly: toggle offset to align with your pay cycle.</div>
