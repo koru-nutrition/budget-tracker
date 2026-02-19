@@ -1007,37 +1007,64 @@ export default function App({ initialData, onDataChange }){
               <div style={{fontSize:15,fontWeight:600}}>Balance Forecast</div>
               <button onClick={()=>setBudgetOpen(true)} style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",fontWeight:600,minHeight:44}}>Set Budgets</button>
             </div>
-            <div style={{position:"relative"}}>
-              <div style={{display:"flex",alignItems:"end",gap:2,height:120}}>
-                {Array.from({length:dashEnd-dashStart+1},(_,i)=>dashStart+i).map(wi=>{
-                  const v=forecast.fBal[wi+1];
-                  const isActual=wi<=forecast.lastActual||!!comp[wi];
-                  const rangeVals=Array.from({length:dashEnd-dashStart+1},(_,i)=>forecast.fBal[dashStart+i+1]).filter(x=>x!=null);
-                  const maxB=Math.max(...rangeVals.map(Math.abs),1);
-                  const h=v!=null?Math.abs(v)/maxB*100:0;
-                  const isHov=hoverBar===wi;
-                  return <div key={wi} onMouseEnter={()=>setHoverBar(wi)} onMouseLeave={()=>setHoverBar(null)}
-                    style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",cursor:"pointer",position:"relative"}}>
-                    <div style={{width:"100%",height:Math.max(h,2)+"%",background:v!=null?(v>=0?P.pos:P.neg):"rgba(255,255,255,0.06)",
-                      borderRadius:"2px 2px 0 0",opacity:isHov?1:(isActual?0.8:0.35),transition:"height .3s, opacity .15s",
-                      outline:isHov?"2px solid "+(v>=0?P.pos:P.neg):"none"}}/>
+            {(()=>{
+              const count=dashEnd-dashStart+1;
+              const points=Array.from({length:count},(_,i)=>{const wi=dashStart+i;return{wi,v:forecast.fBal[wi+1],isActual:wi<=forecast.lastActual||!!comp[wi]}});
+              const vals=points.map(p=>p.v).filter(x=>x!=null);
+              if(vals.length===0)return null;
+              const minV=Math.min(...vals),maxV=Math.max(...vals);
+              const range=maxV-minV||1;
+              const svgW=600,svgH=120,padX=0,padY=8;
+              const getX=i=>padX+i*(svgW-2*padX)/(count-1||1);
+              const getY=v=>v!=null?padY+(1-(v-minV)/range)*(svgH-2*padY):null;
+              // Find last actual index for splitting line segments
+              const lastActIdx=points.reduce((acc,p,i)=>p.isActual?i:acc,-1);
+              // Build path segments
+              const actualPts=points.slice(0,lastActIdx+1).filter((_,i)=>points[i].v!=null);
+              const forecastPts=lastActIdx>=0?points.slice(lastActIdx).filter(p=>p.v!=null):points.filter(p=>p.v!=null);
+              const buildPath=pts=>pts.map((p,i)=>{const idx=points.indexOf(p);return(i===0?"M":"L")+getX(idx).toFixed(1)+","+getY(p.v).toFixed(1)}).join(" ");
+              const actualPath=actualPts.length>1?buildPath(actualPts):"";
+              const forecastPath=forecastPts.length>1?buildPath(forecastPts):"";
+              // Zero line
+              const zeroY=minV<=0&&maxV>=0?getY(0):null;
+              // Gradient fill path for area under line
+              const allValid=points.filter(p=>p.v!=null);
+              const areaPath=allValid.length>1?buildPath(allValid)+"L"+getX(points.indexOf(allValid[allValid.length-1])).toFixed(1)+","+svgH+"L"+getX(points.indexOf(allValid[0])).toFixed(1)+","+svgH+"Z":"";
+              return <div style={{position:"relative"}}>
+                <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",height:120,display:"block"}} onMouseLeave={()=>setHoverBar(null)}
+                  onMouseMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)/rect.width*svgW;const idx=Math.round((x-padX)/((svgW-2*padX)/(count-1||1)));const wi=dashStart+Math.max(0,Math.min(count-1,idx));setHoverBar(wi)}}>
+                  <defs>
+                    <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={P.pos} stopOpacity="0.18"/>
+                      <stop offset="100%" stopColor={P.pos} stopOpacity="0.01"/>
+                    </linearGradient>
+                  </defs>
+                  {areaPath&&<path d={areaPath} fill="url(#balGrad)"/>}
+                  {zeroY!=null&&<line x1={padX} y1={zeroY} x2={svgW-padX} y2={zeroY} stroke={P.txM} strokeWidth="0.5" strokeDasharray="4 3" opacity="0.5"/>}
+                  {actualPath&&<path d={actualPath} fill="none" stroke={P.pos} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>}
+                  {forecastPath&&<path d={forecastPath} fill="none" stroke={P.pos} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" opacity="0.45"/>}
+                  {points.map((p,i)=>{if(p.v==null)return null;const cx=getX(i),cy=getY(p.v);const isHov=hoverBar===p.wi;
+                    return <circle key={p.wi} cx={cx} cy={cy} r={isHov?4:2} fill={p.v>=0?P.pos:P.neg} opacity={isHov?1:(p.isActual?0.9:0.4)} style={{transition:"r .15s, opacity .15s"}}/>;
+                  })}
+                </svg>
+                {hoverBar!=null&&(()=>{const hi=hoverBar-dashStart;const p=points[hi];if(!p||p.v==null)return null;
+                  const xPct=getX(hi)/svgW*100;
+                  return <div style={{position:"absolute",top:-8,left:xPct+"%",transform:"translateX(-50%)",
+                    background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
+                    fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
+                    {fd(new Date(W[hoverBar].getTime()-6*864e5))}: {fm(p.v)}
+                    {hoverBar>forecast.lastActual&&!comp[hoverBar]?" (forecast)":""}
                   </div>;
-                })}
-              </div>
-              {hoverBar!=null&&<div style={{position:"absolute",top:-8,left:"50%",transform:"translateX(-50%)",
-                background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,
-                fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
-                {fd(new Date(W[hoverBar].getTime()-6*864e5))}: {fm(forecast.fBal[hoverBar+1])}
-                {hoverBar>forecast.lastActual&&!comp[hoverBar]?" (forecast)":""}
-              </div>}
-            </div>
+                })()}
+              </div>;
+            })()}
             <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
               <span style={{fontSize:8,color:P.txM}}>Oct 25</span>
               <span style={{fontSize:8,color:P.txM}}>May 26</span>
             </div>
             <div style={{display:"flex",gap:12,marginTop:8,fontSize:9,color:P.txD}}>
-              <span><span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:P.pos,opacity:0.8,marginRight:4,verticalAlign:"middle"}}/>Actual</span>
-              <span><span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:P.pos,opacity:0.35,marginRight:4,verticalAlign:"middle"}}/>Forecast</span>
+              <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.pos} strokeWidth="2" opacity="0.9"/></svg>Actual</span>
+              <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.pos} strokeWidth="2" strokeDasharray="4 3" opacity="0.45"/></svg>Forecast</span>
             </div>
           </div>
           {/* Budgeted Expenses: Pie + Bar */}
