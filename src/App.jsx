@@ -754,8 +754,9 @@ export default function App({ initialData, onDataChange }){
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":"rgba(255,255,255,0.04)",color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,flexShrink:0}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
+                  <div style={{minHeight:18,marginBottom:4}}></div>
                   <div style={{fontSize:20,fontWeight:700,color:P.txM}}>Week of {fd(mon)}</div>
-                  <div style={{fontSize:12,color:P.txM,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+                  <div style={{fontSize:12,color:P.txM,marginTop:2}}>{fd(mon)} – {fd(sun)}<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span></div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)}
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.tx,fontSize:22,fontWeight:700,
@@ -765,8 +766,7 @@ export default function App({ initialData, onDataChange }){
             <div style={{background:P.card,borderRadius:16,padding:"28px 20px",border:"1px solid "+P.bd,textAlign:"center"}}>
               <div style={{fontSize:24,marginBottom:8,opacity:0.4}}>📅</div>
               <div style={{fontSize:14,fontWeight:600,color:P.txM,marginBottom:6}}>Before tracking started</div>
-              <div style={{fontSize:11,color:P.txM,lineHeight:1.5,marginBottom:14}}>This week is before your start week. To backfill data for earlier weeks, update your start week in Settings on the Cashflow tab.</div>
-              <button onClick={()=>setWeekOffset(0)} style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"8px 18px",cursor:"pointer",fontWeight:600,minHeight:44}}>Back to this week</button>
+              <div style={{fontSize:11,color:P.txM,lineHeight:1.5}}>This week is before your start week. To backfill data for earlier weeks, update your start week in Settings on the Cashflow tab.</div>
             </div>
           </div>;
           const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:openingBalance);
@@ -843,19 +843,15 @@ export default function App({ initialData, onDataChange }){
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
                     flexShrink:0,transition:"all 0.2s ease"}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
-                  {isComp&&<div style={{marginBottom:4}}><span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span></div>}
+                  <div style={{minHeight:18,marginBottom:4}}>{isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}</div>
                   <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
-                  <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
+                  <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}{!isCurrentWeek&&<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span>}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi>=W.length-1?"transparent":"rgba(255,255,255,0.04)",color:wi>=W.length-1?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
                     flexShrink:0,transition:"all 0.2s ease"}}>&#8250;</button>
               </div>
-              {!isCurrentWeek&&<div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:24}}>
-                <button onClick={()=>setWeekOffset(0)}
-                  style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"8px 18px",cursor:"pointer",fontWeight:600,minHeight:44,transition:"all 0.2s ease"}}>Back to this week</button>
-              </div>}
             </div>
 
             {/* Opening Balance + Closing Balance */}
