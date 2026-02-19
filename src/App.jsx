@@ -731,7 +731,7 @@ export default function App({ initialData, onDataChange }){
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
                     flexShrink:0,boxShadow:wi>=W.length-1?"none":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.15s ease"}}>&#8250;</button>
               </div>
-              <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:isCurrentWeek&&!isComp?0:24}}>
+              <div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:24}}>
                 {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
                   style={{fontSize:10,color:P.ac,background:P.acL,border:"1px solid "+P.ac,borderRadius:10,padding:"3px 12px",cursor:"pointer",fontWeight:600}}>Back to this week</button>}
                 {isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"1px solid "+P.pos,padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}
