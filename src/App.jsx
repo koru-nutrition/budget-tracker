@@ -140,6 +140,9 @@ export default function App({ initialData, onDataChange }){
   const[twAddNote,setTwAddNote]=useState("");
   const[twEditId,setTwEditId]=useState(null);
   const[twEditAmt,setTwEditAmt]=useState("");
+  const[twAddIncOpen,setTwAddIncOpen]=useState(false);
+  const[twAddIncCat,setTwAddIncCat]=useState("");
+  const[twAddIncAmt,setTwAddIncAmt]=useState("");
   const[fyTab,setFyTab]=useState("fye26");
   // Compute initial FY range containing "today"
   const[dashStart,setDashStart]=useState(()=>{
@@ -819,6 +822,18 @@ export default function App({ initialData, onDataChange }){
             });
             setTwEditId(null);setTwEditAmt("");
           };
+          const addIncome=()=>{
+            if(!twAddIncCat||!twAddIncAmt)return;
+            const amt=parseFloat(twAddIncAmt);if(isNaN(amt)||amt===0)return;
+            setCatData(prev=>{
+              const n={...prev};
+              if(!n[twAddIncCat])n[twAddIncCat]=Array(NW).fill(null);
+              else n[twAddIncCat]=[...n[twAddIncCat]];
+              n[twAddIncCat][wi]=(n[twAddIncCat][wi]||0)+Math.abs(amt);
+              return n;
+            });
+            setTwAddIncCat("");setTwAddIncAmt("");setTwAddIncOpen(false);
+          };
           return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
             {/* Week header */}
             <div style={{textAlign:"center",paddingTop:4}}>
@@ -862,15 +877,50 @@ export default function App({ initialData, onDataChange }){
                 <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos}}>{fm(wkInc)}</div>
               </div>
               {incRows.length>0?incRows.map(inc=>
-                <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL}}>
+                <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL,
+                  cursor:isComp?"pointer":"default"}} onClick={()=>{if(isComp)onCatCell(inc.id,wi)}}>
                   <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(inc.bud)}</span>}
-                    <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
-                    {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                    {isComp?
+                      <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,cursor:"pointer",
+                        borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
+                    :<>
+                      <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
+                      {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                    </>}
                   </div>
                 </div>
               ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No income expected</div>}
+
+              {/* Add income button */}
+              {!twAddIncOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
+                <button onClick={()=>{setTwAddIncOpen(true);setTwAddIncCat(INC[0]?INC[0].id:"")}}
+                  style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:"rgba(255,255,255,0.03)",color:P.pos,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Income</button>
+              </div>
+              :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:"rgba(255,255,255,0.02)"}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Add Income</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <select value={twAddIncCat} onChange={e=>setTwAddIncCat(e.target.value)}
+                    style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:44}}>
+                    {INC.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}
+                  </select>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1,display:"flex",alignItems:"center",gap:4}}>
+                      <span style={{fontSize:11,color:P.txM}}>$</span>
+                      <input type="number" step="0.01" placeholder="0.00" value={twAddIncAmt} onChange={e=>setTwAddIncAmt(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter")addIncome()}}
+                        style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:44}}/>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+                    <button onClick={()=>{setTwAddIncOpen(false);setTwAddIncCat("");setTwAddIncAmt("")}}
+                      style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:"rgba(255,255,255,0.04)",color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                    <button onClick={addIncome}
+                      style={{padding:"7px 16px",borderRadius:8,border:"none",background:P.posL,color:P.pos,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add</button>
+                  </div>
+                </div>
+              </div>}
             </div>
 
             {/* Expenses */}
@@ -890,7 +940,11 @@ export default function App({ initialData, onDataChange }){
                       <span style={{fontSize:12,color:P.tx}}>{it.n}</span>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(it.bud)}</span>}
-                        {twEditId===it.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                        {isComp?
+                          <span onClick={()=>onCatCell(it.id,wi)}
+                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,cursor:"pointer",
+                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
+                        :twEditId===it.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
                           <span style={{fontSize:10,color:P.txM}}>$</span>
                           <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
                             onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
@@ -898,9 +952,10 @@ export default function App({ initialData, onDataChange }){
                           <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
                           <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:"rgba(255,255,255,0.04)",color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
                         </div>:<>
-                          <span onClick={()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}}
-                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,cursor:"pointer",
-                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
+                          <span onClick={it.actual!=null?()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}:undefined}
+                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,
+                              cursor:it.actual!=null?"pointer":"default",
+                              borderBottom:it.actual!=null?"1px dashed "+P.bd:"none"}}>{fm(it.display)}</span>
                           {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                         </>}
                       </div>
