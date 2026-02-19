@@ -556,7 +556,7 @@ export default function AppWrapper() {
             {householdInfo.name}
           </span>
         )}
-        <span style={{ fontSize: 10, color: P.txD }}>{user.email}</span>
+        <a href={"mailto:" + user.email} style={{ fontSize: 10, color: P.txD, textDecoration: "none" }}>{user.email}</a>
         <button onClick={() => setSettingsOpen(true)}
           style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6,
             border: "1px solid " + P.bd, background: P.w04, cursor: "pointer", padding: 0 }}>
