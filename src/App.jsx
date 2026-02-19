@@ -719,21 +719,21 @@ export default function App({ initialData, onDataChange }){
             <div style={{textAlign:"center",paddingTop:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
-                  style={{width:36,height:36,borderRadius:"50%",border:"1px solid "+(wi<=0?P.bdL:P.bd),background:wi<=0?"transparent":P.card,color:wi<=0?P.txM:P.tx,fontSize:18,
+                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi<=0?"transparent":P.acL,color:wi<=0?P.txM:P.ac,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
-                    flexShrink:0,boxShadow:wi<=0?"none":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.15s ease"}}>&#8249;</button>
+                    flexShrink:0,boxShadow:wi<=0?"none":"0 2px 8px rgba(37,99,235,0.10)",transition:"all 0.2s ease"}}>&#8249;</button>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
                   <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}</div>
                 </div>
                 <button onClick={()=>setWeekOffset(o=>o+1)} disabled={wi>=W.length-1}
-                  style={{width:36,height:36,borderRadius:"50%",border:"1px solid "+(wi>=W.length-1?P.bdL:P.bd),background:wi>=W.length-1?"transparent":P.card,color:wi>=W.length-1?P.txM:P.tx,fontSize:18,
+                  style={{width:44,height:44,borderRadius:14,border:"none",background:wi>=W.length-1?"transparent":P.acL,color:wi>=W.length-1?P.txM:P.ac,fontSize:22,fontWeight:700,
                     cursor:wi>=W.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi>=W.length-1?0.3:1,
-                    flexShrink:0,boxShadow:wi>=W.length-1?"none":"0 1px 3px rgba(0,0,0,0.06)",transition:"all 0.15s ease"}}>&#8250;</button>
+                    flexShrink:0,boxShadow:wi>=W.length-1?"none":"0 2px 8px rgba(37,99,235,0.10)",transition:"all 0.2s ease"}}>&#8250;</button>
               </div>
               <div style={{display:"flex",gap:10,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6,minHeight:24}}>
                 {!isCurrentWeek&&<button onClick={()=>setWeekOffset(0)}
-                  style={{fontSize:10,color:P.ac,background:P.acL,border:"1px solid "+P.ac,borderRadius:10,padding:"3px 12px",cursor:"pointer",fontWeight:600}}>Back to this week</button>}
+                  style={{fontSize:11,color:P.ac,background:P.acL,border:"none",borderRadius:12,padding:"6px 16px",cursor:"pointer",fontWeight:600,boxShadow:"0 1px 4px rgba(37,99,235,0.08)",transition:"all 0.2s ease"}}>Back to this week</button>}
                 {isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"1px solid "+P.pos,padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}
               </div>
             </div>
