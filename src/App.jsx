@@ -632,7 +632,7 @@ export default function App({ initialData, onDataChange }){
       </div>}
 
       {/* Header */}
-      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"nowrap",gap:8,position:"sticky",top:0,zIndex:100,overflow:"auto"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
           <BudgetIcon size={22}/>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
@@ -657,10 +657,10 @@ export default function App({ initialData, onDataChange }){
             </>;
           })()}
         </div>
-        {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+        {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"nowrap",overflow:"auto"}}>
           {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
             <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid rgba(255,255,255,0.12)":"1px solid transparent",
-              background:tab===k?"rgba(255,255,255,0.1)":"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease"}}>{l}</button>
+              background:tab===k?"rgba(255,255,255,0.1)":"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease",flexShrink:0,whiteSpace:"nowrap"}}>{l}</button>
           )}
         </div>}
       </div>
