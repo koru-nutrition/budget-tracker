@@ -557,8 +557,8 @@ export default function App({ initialData, onDataChange, theme }){
     for(let i=sw;i<NW;i++){
       if(i<=lastActual||comp[i]){fInc[i]=wT[i].inc;fExp[i]=wT[i].exp;continue}
       let wInc=0,wExp=0;
-      INC.forEach(c=>{const v=budgetForWeek(budgets[c.id],i);if(v){wInc+=v;projCat[c.id][i]=v}});
-      AEXP.forEach(c=>{const v=budgetForWeek(budgets[c.id],i);if(v){wExp+=v;projCat[c.id][i]=v}});
+      INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
+      AEXP.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0});
       fInc[i]=wInc;fExp[i]=wExp;
       const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:null);
       if(prev!=null)fBal[i+1]=Math.round((prev+wInc-wExp)*100)/100;
@@ -569,7 +569,7 @@ export default function App({ initialData, onDataChange, theme }){
       }
     }
     return{fInc,fExp,fBal,wkInc:wkIncAvg,wkExp:wkExpAvg,wkNet:wkIncAvg-wkExpAvg,lastActual,projCat};
-  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW]);
+  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData]);
 
   // ─── Insights: computed from past CATEGORY data, filtered by range ───
   const insights=useMemo(()=>{
@@ -891,7 +891,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos}}>{fm(wkInc)}</div>
               </div>
               {incRows.length>0?incRows.map(inc=>
-                <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL,
+                <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL,minHeight:44,
                   cursor:isComp?"pointer":"default"}} onClick={()=>{if(isComp)onCatCell(inc.id,wi)}}>
                   <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -899,8 +899,18 @@ export default function App({ initialData, onDataChange, theme }){
                     {isComp?
                       <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,cursor:"pointer",
                         borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
-                    :<>
-                      <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5}}>{fm(inc.display)}</span>
+                    :twEditId===inc.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <span style={{fontSize:10,color:P.txM}}>$</span>
+                      <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
+                        onKeyDown={e=>{if(e.key==="Enter")updateExpense(inc.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
+                        style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
+                      <button onClick={()=>updateExpense(inc.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
+                      {inc.bud>0&&inc.actual!=null&&<button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[inc.id])return prev;n[inc.id]=[...n[inc.id]];n[inc.id][wi]=null;return n});setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Clear</button>}
+                      <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
+                    </div>:<>
+                      <span onClick={()=>{setTwEditId(inc.id);setTwEditAmt(String(inc.display||0))}}
+                        style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5,
+                          cursor:"pointer",borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
                       {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                     </>}
                   </div>
@@ -964,12 +974,13 @@ export default function App({ initialData, onDataChange, theme }){
                             onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
                             style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
                           <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
+                          {it.bud>0&&it.actual!=null&&<button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[it.id])return prev;n[it.id]=[...n[it.id]];n[it.id][wi]=null;return n});setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Clear</button>}
                           <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
                         </div>:<>
-                          <span onClick={it.actual!=null?()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}:undefined}
+                          <span onClick={()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}}
                             style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,
-                              cursor:it.actual!=null?"pointer":"default",
-                              borderBottom:it.actual!=null?"1px dashed "+P.bd:"none"}}>{fm(it.display)}</span>
+                              cursor:"pointer",
+                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
                           {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                         </>}
                       </div>
@@ -1686,6 +1697,26 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
           </div>}
           {cdTxns.length===0&&<div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
+
+          {/* Edit controls for non-completed, non-pre-start category cells */}
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&<div style={{marginTop:12}}>
+            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Edit Value</div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
+              <input type="number" step="0.01" value={eVal} onChange={e=>setEVal(e.target.value)} placeholder={cdVal!=null?String(Math.abs(cdVal)):"0.00"}
+                onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(eVal);if(!isNaN(v)&&v!==0){setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=Math.abs(v);return n});setCellDetail(null)}}}}
+                style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx,minHeight:44}}/>
+              <button onClick={()=>{const v=parseFloat(eVal);if(isNaN(v))return;setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=v===0?null:Math.abs(v);return n});setCellDetail(null)}}
+                style={{padding:"8px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
+            </div>
+            {catData[cellDetail.id]&&catData[cellDetail.id][cellDetail.wi]!=null&&(()=>{
+              const budVal=forecast.projCat[cellDetail.id]&&forecast.projCat[cellDetail.id][cellDetail.wi];
+              return <button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])return prev;n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=null;return n});setCellDetail(null)}}
+                style={{marginTop:8,width:"100%",padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:10,cursor:"pointer",minHeight:36,textAlign:"center"}}>
+                {budVal?"Reset to Budget ("+fm(budVal)+")":"Clear Override"}
+              </button>;
+            })()}
+          </div>}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
             <button onClick={()=>setCellDetail(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Close</button>
