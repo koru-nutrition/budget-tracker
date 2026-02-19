@@ -16,6 +16,7 @@ const P = {
   pos: "#4ADE80", neg: "#F87171",
 };
 
+const BudgetIcon=({size=20})=><svg width={size} height={size} viewBox="0 0 100 100" fill="none"><rect x="4" y="4" width="92" height="92" rx="22" fill={P.card} stroke={P.ac} strokeOpacity="0.25" strokeWidth="2"/><line x1="50" y1="24" x2="50" y2="76" stroke={P.ac} strokeWidth="6" strokeLinecap="round"/><path d="M60 38C60 26 40 26 40 38C40 46 60 54 60 62C60 74 40 74 40 62" stroke={P.ac} strokeWidth="6" strokeLinecap="round" fill="none"/></svg>;
 const btnBase = {
   padding: "10px 24px", borderRadius: 8, border: "1px solid " + P.bd,
   background: "rgba(255,255,255,0.04)", cursor: "pointer", fontSize: 13, fontWeight: 600, color: P.tx, minHeight: 44,
@@ -246,7 +247,7 @@ export default function AppWrapper() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>💰</div>
+          <div style={{ marginBottom: 12 }}><BudgetIcon size={40}/></div>
           <div style={{ fontSize: 14, color: P.txD }}>Loading...</div>
         </div>
       </div>
@@ -258,7 +259,7 @@ export default function AppWrapper() {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
         <div style={{ textAlign: "center", background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd, boxShadow: "none" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>💰</div>
+          <div style={{ marginBottom: 16 }}><BudgetIcon size={52}/></div>
           <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, color: P.tx }}>Budget Tracker</div>
           <div style={{ fontSize: 12, color: P.txD, marginBottom: 24 }}>Sign in to access your cashflow data</div>
           <button onClick={signInWithGoogle}
@@ -278,7 +279,7 @@ export default function AppWrapper() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: P.bg }}>
         <div style={{ background: P.card, padding: "40px 48px", borderRadius: 16, border: "1px solid " + P.bd,
           boxShadow: "none", width: 380, maxWidth: "90vw" }}>
-          <div style={{ fontSize: 48, textAlign: "center", marginBottom: 8 }}>💰</div>
+          <div style={{ textAlign: "center", marginBottom: 8 }}><BudgetIcon size={52}/></div>
           <div style={{ fontSize: 20, fontWeight: 700, textAlign: "center", marginBottom: 4, color: P.tx }}>Set Up Your Household</div>
           <div style={{ fontSize: 12, color: P.txD, textAlign: "center", marginBottom: 28 }}>
             Create a new household or join an existing one to share budget data.

@@ -74,6 +74,7 @@ const P={
   fBg:"#0B0F14",fBd:"rgba(255,255,255,0.06)",sBg:"rgba(251,191,36,0.08)",sBd:"rgba(251,191,36,0.2)",
 };
 const ACCT_COLORS=["#60A5FA","#4ADE80","#FBBF24","#A78BFA","#F87171","#38BDF8","#E879F9","#34D399","#FB923C","#C084FC"];
+const BudgetIcon=({size=20})=><svg width={size} height={size} viewBox="0 0 100 100" fill="none"><rect x="4" y="4" width="92" height="92" rx="22" fill={P.card} stroke={P.ac} strokeOpacity="0.25" strokeWidth="2"/><line x1="50" y1="24" x2="50" y2="76" stroke={P.ac} strokeWidth="6" strokeLinecap="round"/><path d="M60 38C60 26 40 26 40 38C40 46 60 54 60 62C60 74 40 74 40 62" stroke={P.ac} strokeWidth="6" strokeLinecap="round" fill="none"/></svg>;
 
 // FY boundaries: FY26 ends at week containing March 31
 
@@ -633,7 +634,7 @@ export default function App({ initialData, onDataChange }){
       {/* Header */}
       <div style={{background:"rgba(11,15,20,0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
-          <span style={{fontSize:16,fontWeight:700,color:P.ac,flexShrink:0}}>💰</span>
+          <BudgetIcon size={22}/>
           <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
           {startWeek!=null&&(()=>{
             // Auto-detect: find the FY that contains "today" (curWi)
