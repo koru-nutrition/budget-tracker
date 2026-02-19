@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 
-// ─── Weeks: dynamic, starting Mon 20 Oct 2025 ───
-const BASE_START=new Date(2025,9,20);// Mon Oct 20 2025
+// ─── Weeks: dynamic, starting Mon 31 Mar 2025 (NZ FY starts 1 Apr) ───
+const BASE_START=new Date(2025,2,31);// Mon Mar 31 2025
 const mkWeeks=(n,start)=>Array.from({length:n},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i*7+6);return d});// returns Sun end dates
-const FYE26_END=22;// week index 22 = Sun Mar 29 2026 (last full week before Apr 1)
-const INIT_WEEKS=75;// FYE26 (23 wks) + FYE27 (52 wks)
+const FYE26_END=51;// week index 51 = Sun Mar 29 2026 (last full week before Apr 1)
+const INIT_WEEKS=104;// FYE26 (52 wks) + FYE27 (52 wks)
 let INIT_W=mkWeeks(INIT_WEEKS,BASE_START);
 const fd=d=>`${d.getDate()} ${d.toLocaleString("en-NZ",{month:"short"})}`;
 const fdr=d=>`${d.getDate()}/${d.getMonth()+1}`;
