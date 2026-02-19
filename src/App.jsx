@@ -622,9 +622,9 @@ export default function App({ initialData, onDataChange }){
 
       {/* Header */}
       <div style={{background:P.card,borderBottom:"1px solid "+P.bd,padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:16,fontWeight:700,color:P.ac}}>💰</span>
-          <span style={{fontSize:16,fontWeight:700}}>Budget Tracker</span>
+        <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:"1 1 auto"}}>
+          <span style={{fontSize:16,fontWeight:700,color:P.ac,flexShrink:0}}>💰</span>
+          <span style={{fontSize:16,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>Budget Tracker</span>
           {(()=>{
             // Auto-detect: find the FY that contains "today" (curWi)
             const autoFy=fys.find(f=>curWi>=f.start&&curWi<=f.end)||fys[0];
@@ -637,11 +637,11 @@ export default function App({ initialData, onDataChange }){
               setHeaderFy(next.id===autoFy.id?null:next.id);
             };
             return <>
-              <span onClick={cycleNext} style={{fontSize:10,color:P.acD,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600}}>{activeFy.label}</span>
-              <div style={{display:"flex",gap:1}}>
-                {fyWis.map(i=>{const s=getStat(i);return <div key={i} style={{width:5,height:12,background:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:"#ddd",borderRadius:1,opacity:s==="f"?0.3:0.8}}/>})}
+              <span onClick={cycleNext} style={{fontSize:10,color:P.acD,background:P.acL,padding:"2px 8px",borderRadius:10,cursor:"pointer",fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{activeFy.label}</span>
+              <div style={{display:"flex",gap:1,minWidth:0,flex:"0 1 auto",overflow:"hidden"}}>
+                {fyWis.map(i=>{const s=getStat(i);return <div key={i} style={{minWidth:2,flex:"1 1 5px",height:12,background:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:"#ddd",borderRadius:1,opacity:s==="f"?0.3:0.8}}/>})}
               </div>
-              <span style={{fontSize:10,color:P.ac,fontWeight:600}}>{fyComp}/{fyWis.length}</span>
+              <span style={{fontSize:10,color:P.ac,fontWeight:600,flexShrink:0,whiteSpace:"nowrap"}}>{fyComp}/{fyWis.length}</span>
             </>;
           })()}
         </div>
