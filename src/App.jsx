@@ -1714,7 +1714,6 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
           ;})()}
         </div>}
-      </div>
 
       {/* ═══ DEBT TAB ═══ */}
       {startWeek!=null&&tab==="debt"&&(()=>{
@@ -1975,6 +1974,7 @@ export default function App({ initialData, onDataChange, theme }){
           </div>}
         </div>;
       })()}
+      </div>
 
       {/* ═══ DEBT ADD/EDIT MODAL ═══ */}
       {debtModal!=null&&(()=>{
