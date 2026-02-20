@@ -1401,9 +1401,13 @@ export default function App({ initialData, onDataChange, theme }){
             </div>;})()}
             {insights.compWks.length>1&&(()=>{
               const nets=insights.compWks.map(wi=>({wi,net:wT[wi].net}));
+              const totalNet=nets.reduce((s,n)=>s+n.net,0);
               const maxAbs=Math.max(...nets.map(n=>Math.abs(n.net)),1);
               return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Weekly Cashflow</div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10}}>
+                <span style={{fontSize:15,fontWeight:600}}>Weekly Cashflow</span>
+                <span style={{fontSize:13,fontWeight:700,color:totalNet>=0?P.pos:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>Net: {fm(totalNet)}</span>
+              </div>
               <div style={{position:"relative"}}>
               <div style={{display:"flex",gap:3,height:120}}>
                 {nets.map((n,i)=>{
