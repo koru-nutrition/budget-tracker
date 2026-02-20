@@ -1322,7 +1322,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{fontSize:15,fontWeight:700,color:insights.avgNet>=0?P.pos:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",marginTop:2}}>{fm(insights.avgNet)}</div>
               </div>
             </div>
-            {/* Pie + Bar - By Type with horizontal bars */}
+            {/* Pie + Bar - By Category with horizontal bars */}
             {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
               <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180,maxWidth:isWide?320:undefined}}>
                 <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
@@ -1349,17 +1349,17 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",textAlign:"center"}}>
                   {hoverSlice!=null?<div>
                     <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{insights.grpTotals[hoverSlice].n}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpTotals[hoverSlice].total)}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpTotals[hoverSlice].total/insights.nw)}/wk</div>
                     <div style={{fontSize:10,color:P.txM}}>{(insights.grpTotals[hoverSlice].total/insights.grpGrand*100).toFixed(1)}%</div>
                   </div>:<div>
                     <div style={{fontSize:10,color:P.txD}}>Total</div>
-                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand)}</div>
+                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand/insights.nw)}/wk</div>
                   </div>}
                 </div>
                 </div>
               </div>
               <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
-                <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>By Type</div>
+                <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>By Category</div>
                 {insights.grpTotals.map((g,i)=>{
                   const maxT=insights.grpTotals[0]?insights.grpTotals[0].total:1;
                   const isH=hoverSlice===i;
@@ -1372,7 +1372,7 @@ export default function App({ initialData, onDataChange, theme }){
                       <div style={{height:"100%",width:Math.max(g.total/maxT*100,1)+"%",background:g.c,borderRadius:5,
                         opacity:isH?1:0.7,transition:"width .4s, opacity .15s"}}/>
                     </div>
-                    <span style={{fontSize:10,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",width:75,textAlign:"right"}}>{fm(g.total)}</span>
+                    <span style={{fontSize:10,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",width:75,textAlign:"right"}}>{fm(g.total/insights.nw)}</span>
                     <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right"}}>{(g.total/insights.grpGrand*100).toFixed(0)}%</span>
                   </div>;
                 })}
@@ -1657,7 +1657,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <input value={grp.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,n:v}:g))}}
                   style={{flex:1,fontSize:12,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
                 <button onClick={()=>setECAT(p=>p.filter((_,j)=>j!==gi))}
-                  style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove type">✕</button>
+                  style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove category">✕</button>
               </div>
               {grp.items.map((it,ii)=><div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
@@ -1669,8 +1669,8 @@ export default function App({ initialData, onDataChange, theme }){
               <button onClick={()=>{const id="e"+Date.now().toString(36).slice(-4);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:[...g.items,{id,n:"New Category"}]}:g))}}
                 style={{fontSize:9,padding:"6px 10px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
             </div>)}
-            <button onClick={()=>{const c=CAT_COLORS[ECAT.length%CAT_COLORS.length];setECAT(p=>[...p,{n:"New Type",c,items:[{id:"e"+Date.now().toString(36).slice(-4),n:"New Category"}]}])}}
-              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Type</button>
+            <button onClick={()=>{const c=CAT_COLORS[ECAT.length%CAT_COLORS.length];setECAT(p=>[...p,{n:"New Category",c,items:[{id:"e"+Date.now().toString(36).slice(-4),n:"New Category"}]}])}}
+              style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Category</button>
           </div>
 
           <div style={{borderTop:"1px solid "+P.bdL,marginTop:16,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
