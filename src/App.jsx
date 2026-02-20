@@ -662,6 +662,49 @@ export default function App({ initialData, onDataChange, theme }){
     });
   },[debts,catData,budgets,W,freqToWeekly]);
 
+  // ─── Debt payoff trajectories (historic + projected) ───
+  const debtTrajectories=useMemo(()=>{
+    const now=new Date();
+    let curWi=0;
+    for(let i=0;i<W.length;i++){const sun=W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){curWi=i;break}if(now<mon){curWi=Math.max(0,i-1);break}if(i===W.length-1)curWi=i}
+    const MAX_PROJ=520;
+    return debts.reduce((acc,debt)=>{
+      const balDate=new Date(debt.balanceDate);
+      let startWi=0;
+      for(let i=0;i<W.length;i++){if(balDate<=W[i]){startWi=i;break}if(i===W.length-1)startWi=i}
+      let bal=debt.balance;const moRate=(debt.interestRate||0)/12/100;let prevMo=balDate.getMonth();
+      const pts=[];
+      const manual=[...(debt.charges||[]).map(c=>({...c,_t:"charge",_d:new Date(c.date)})),...(debt.extraPayments||[]).map(e=>({...e,_t:"extra",_d:new Date(e.date)}))].sort((a,b)=>a._d-b._d);
+      let mi=0;
+      for(let wi=startWi;wi<=curWi;wi++){
+        const sun=W[wi];const cm=sun.getMonth();
+        if(cm!==prevMo&&bal>0){bal+=Math.round(bal*moRate*100)/100}
+        prevMo=cm;
+        while(mi<manual.length&&manual[mi]._d<=sun){const t=manual[mi];if(t._t==="charge")bal+=t.amount;else bal-=t.amount;mi++}
+        if(debt.linkedCatId&&catData[debt.linkedCatId]){const pay=catData[debt.linkedCatId][wi];if(pay!=null&&pay>0)bal-=pay}
+        pts.push({wi,bal:Math.round(Math.max(0,bal)*100)/100,isActual:true,date:new Date(sun)});
+      }
+      while(mi<manual.length){const t=manual[mi];if(t._t==="charge")bal+=t.amount;else bal-=t.amount;mi++}
+      bal=Math.round(Math.max(0,bal)*100)/100;
+      const bgt=debt.linkedCatId?budgets[debt.linkedCatId]:null;
+      const wkAvg=bgt&&bgt.amt?freqToWeekly(bgt.amt,bgt.freq||"w"):0;
+      let projPayoffWi=null,projPayoffDate=null;
+      if(bal>0&&wkAvg>0){
+        for(let wi=curWi+1;wi<curWi+MAX_PROJ;wi++){
+          let sun;if(wi<NW)sun=W[wi];else{sun=new Date(W[NW-1]);sun.setDate(sun.getDate()+(wi-NW+1)*7)}
+          const cm=sun.getMonth();
+          if(cm!==prevMo&&bal>0){bal+=Math.round(bal*moRate*100)/100}
+          prevMo=cm;
+          let pay=0;if(wi<NW&&bgt)pay=budgetForWeek(bgt,wi);else pay=wkAvg;
+          if(pay>0)bal-=pay;bal=Math.round(Math.max(0,bal)*100)/100;
+          pts.push({wi,bal,isActual:false,date:new Date(sun)});
+          if(bal<=0){projPayoffWi=wi;projPayoffDate=new Date(sun);break}
+        }
+      }
+      acc[debt.id]={points:pts,projPayoffWi,projPayoffDate};return acc;
+    },{});
+  },[debts,catData,budgets,W,NW,budgetForWeek,freqToWeekly]);
+
   // ─── Auto-detect debt payoffs ───
   const debtPaidRef=useRef(new Set());
   useEffect(()=>{
@@ -1788,6 +1831,66 @@ export default function App({ initialData, onDataChange, theme }){
                 </div>)}
               </div>
             </div>
+
+            {/* Payoff forecast chart */}
+            {(()=>{
+              const traj=debtTrajectories[di.id];
+              if(!traj||traj.points.length<2){
+                if(!di.linkedCatId)return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Payoff Forecast</div>
+                  <div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>Link a cashflow category to see your payoff trajectory</div>
+                </div>;
+                return null;
+              }
+              const rawPts=traj.points;let pts=rawPts;
+              if(rawPts.length>200){const step=Math.ceil(rawPts.length/200);const laI=rawPts.reduce((a,p,i)=>p.isActual?i:a,-1);const pI=traj.projPayoffWi!=null?rawPts.findIndex(p=>p.wi===traj.projPayoffWi):-1;
+                pts=rawPts.filter((_,i)=>i===0||i===rawPts.length-1||i===laI||i===laI+1||i===pI||i%step===0)}
+              const vals=pts.map(p=>p.bal);const maxV=Math.max(...vals);const minV=0;const range=maxV-minV||1;
+              const svgW=600,svgH=180,padX=0,padY=14;
+              const getX=i=>padX+i*(svgW-2*padX)/(pts.length-1||1);
+              const getY=v=>padY+(1-(v-minV)/range)*(svgH-2*padY);
+              const lastActIdx=pts.reduce((a,p,i)=>p.isActual?i:a,-1);
+              const actPts=pts.slice(0,lastActIdx+1);const fcPts=lastActIdx>=0?pts.slice(lastActIdx):pts;
+              const bp=sub=>sub.map((p,i)=>{const idx=pts.indexOf(p);return(i===0?"M":"L")+getX(idx).toFixed(1)+","+getY(p.bal).toFixed(1)}).join(" ");
+              const actPath=actPts.length>1?bp(actPts):"";const fcPath=fcPts.length>1?bp(fcPts):"";
+              const zeroY=getY(0);
+              const areaPath=pts.length>1?bp(pts)+"L"+getX(pts.length-1).toFixed(1)+","+svgH+"L"+getX(0).toFixed(1)+","+svgH+"Z":"";
+              return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12,flexWrap:"wrap",gap:4}}>
+                  <div style={{fontSize:12,fontWeight:700}}>Payoff Forecast</div>
+                  {traj.projPayoffDate&&<div style={{fontSize:10,fontWeight:600,color:P.pos}}>Debt-free: {traj.projPayoffDate.toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"})}</div>}
+                  {!traj.projPayoffDate&&di.currentBalance>0&&di.weeklyPayment>0&&<div style={{fontSize:10,color:P.neg,fontWeight:600}}>Not paid off within 10 years</div>}
+                </div>
+                <div style={{position:"relative"}}>
+                  <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}}
+                    onMouseLeave={()=>setHoverBar(null)}
+                    onMouseMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)/rect.width*svgW;const idx=Math.round((x-padX)/((svgW-2*padX)/(pts.length-1||1)));setHoverBar(Math.max(0,Math.min(pts.length-1,idx)))}}>
+                    <defs><linearGradient id="debtGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.ac} stopOpacity="0.12"/><stop offset="100%" stopColor={P.ac} stopOpacity="0.01"/></linearGradient></defs>
+                    {areaPath&&<path d={areaPath} fill="url(#debtGrad)"/>}
+                    <line x1={padX} y1={zeroY} x2={svgW-padX} y2={zeroY} stroke={P.pos} strokeWidth="0.5" strokeDasharray="4 3" opacity="0.4"/>
+                    {actPath&&<path d={actPath} fill="none" stroke={P.ac} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>}
+                    {fcPath&&<path d={fcPath} fill="none" stroke={P.ac} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" opacity="0.5"/>}
+                    {actPts.map((p,i)=>{const idx=pts.indexOf(p);return <circle key={"a"+i} cx={getX(idx)} cy={getY(p.bal)} r="2" fill={P.ac} opacity="0.7"/>})}
+                    {hoverBar!=null&&hoverBar>=0&&hoverBar<pts.length&&<circle cx={getX(hoverBar)} cy={getY(pts[hoverBar].bal)} r="5" fill={P.ac} opacity="0.9" style={{transition:"cx .1s,cy .1s"}}/>}
+                    {traj.projPayoffWi!=null&&(()=>{const pi=pts.findIndex(p=>p.wi===traj.projPayoffWi);if(pi<0)return null;return <circle cx={getX(pi)} cy={getY(0)} r="5" fill={P.pos} stroke="#fff" strokeWidth="1.5"/>})()}
+                  </svg>
+                  {hoverBar!=null&&hoverBar>=0&&hoverBar<pts.length&&(()=>{const p=pts[hoverBar];const xPct=getX(hoverBar)/svgW*100;
+                    return <div style={{position:"absolute",top:-8,left:xPct+"%",transform:"translateX(-50%)",background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5}}>
+                      {fd(new Date(p.date.getTime()-6*864e5))}: {fm(p.bal)}{!p.isActual?" (projected)":""}
+                    </div>;
+                  })()}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                  <span style={{fontSize:8,color:P.txM}}>{pts[0].date.toLocaleString("en-NZ",{month:"short"})+" "+String(pts[0].date.getFullYear()).slice(2)}</span>
+                  <span style={{fontSize:8,color:P.txM}}>{pts[pts.length-1].date.toLocaleString("en-NZ",{month:"short"})+" "+String(pts[pts.length-1].date.getFullYear()).slice(2)}</span>
+                </div>
+                <div style={{display:"flex",gap:12,marginTop:6,fontSize:9,color:P.txD,flexWrap:"wrap"}}>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.ac} strokeWidth="2.5" opacity="0.9"/></svg>Actual</span>
+                  {fcPts.length>1&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.ac} strokeWidth="2" strokeDasharray="4 3" opacity="0.5"/></svg>Projected</span>}
+                  {traj.projPayoffDate&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={P.pos} stroke="#fff" strokeWidth="1"/></svg>Payoff</span>}
+                </div>
+              </div>;
+            })()}
 
             {/* Linked category */}
             {di.linkedCatId&&<div style={{background:P.card,borderRadius:16,padding:16,border:"1px solid "+P.bd}}>
