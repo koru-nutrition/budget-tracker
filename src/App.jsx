@@ -1075,21 +1075,14 @@ export default function App({ initialData, onDataChange, theme }){
               {l:"Budget Net /wk",v:forecast.wkNet,g:true},
               {l:"Projected Net Cashflow",v:futCf,g:true}
             ];
-            return <>
-            <div style={{display:"grid",gridTemplateColumns:isXWide?"repeat(4, 1fr)":"1fr 1fr",gap:10}}>
-              {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>{s.l}</div>
-                <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+            const allStats=[...stats,{l:"Projected End Balance",v:endBal,g:true}];
+            return <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {allStats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:"14px 16px",border:"1px solid "+P.bd,flex:"1 1 0",minWidth:120}}>
+                <div style={{fontSize:10,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>{s.l}</div>
+                <div style={{fontSize:18,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
                   color:s.fmt===false?P.tx:s.g?(s.v!=null&&s.v>=0?P.pos:P.neg):P.tx}}>{s.fmt===false?s.v:fm(s.v)}</div>
               </div>)}
-            </div>
-            {/* Projected End Balance - standalone hero */}
-            <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, rgba(74,222,128,0.05) 100%)",borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>Projected End Balance</div>
-              <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
-                color:endBal!=null&&endBal>=0?P.pos:P.neg}}>{fm(endBal)}</div>
-            </div>
-            </>;
+            </div>;
           })()}
           {/* Forecast Chart */}
           <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
@@ -1104,7 +1097,7 @@ export default function App({ initialData, onDataChange, theme }){
               if(vals.length===0)return null;
               const minV=Math.min(...vals),maxV=Math.max(...vals);
               const range=maxV-minV||1;
-              const svgW=600,svgH=120,padX=0,padY=8;
+              const svgW=600,svgH=220,padX=0,padY=12;
               const getX=i=>padX+i*(svgW-2*padX)/(count-1||1);
               const getY=v=>v!=null?padY+(1-(v-minV)/range)*(svgH-2*padY):null;
               // Find last actual index for splitting line segments
@@ -1121,7 +1114,7 @@ export default function App({ initialData, onDataChange, theme }){
               const allValid=points.filter(p=>p.v!=null);
               const areaPath=allValid.length>1?buildPath(allValid)+"L"+getX(points.indexOf(allValid[allValid.length-1])).toFixed(1)+","+svgH+"L"+getX(points.indexOf(allValid[0])).toFixed(1)+","+svgH+"Z":"";
               return <div style={{position:"relative"}}>
-                <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",height:120,display:"block"}} onMouseLeave={()=>setHoverBar(null)}
+                <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}} onMouseLeave={()=>setHoverBar(null)}
                   onMouseMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)/rect.width*svgW;const idx=Math.round((x-padX)/((svgW-2*padX)/(count-1||1)));const wi=dashStart+Math.max(0,Math.min(count-1,idx));setHoverBar(wi)}}>
                   <defs>
                     <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1159,7 +1152,10 @@ export default function App({ initialData, onDataChange, theme }){
           </div>
           {/* Budgeted Expenses: Pie + Bar */}
           {forecast.wkExp>0&&(()=>{
-            const bCats=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
+            const bCatsRaw=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
+            const bMain=bCatsRaw.filter(g=>g.wk/forecast.wkExp>0.01);
+            const bSmall=bCatsRaw.filter(g=>g.wk/forecast.wkExp<=0.01);
+            const bCats=bSmall.length>0?[...bMain,{n:"Other",c:P.txM,wk:bSmall.reduce((s,g)=>s+g.wk,0),_items:bSmall}]:bMain;
             return <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
             <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180,maxWidth:isWide?320:undefined}}>
               <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Budgeted Expenses</div>
@@ -1186,7 +1182,9 @@ export default function App({ initialData, onDataChange, theme }){
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",textAlign:"center"}}>
                 {hoverSlice!=null&&bCats[hoverSlice]?<div>
                   <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{bCats[hoverSlice].n}</div>
-                  <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(bCats[hoverSlice].wk)}/wk</div>
+                  {bCats[hoverSlice]._items?<div style={{fontSize:8,color:P.txM,maxWidth:80}}>
+                    {bCats[hoverSlice]._items.map(it=>it.n+": "+fm(it.wk)+"/wk").join(", ")}
+                  </div>:<div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(bCats[hoverSlice].wk)}/wk</div>}
                   <div style={{fontSize:10,color:P.txM}}>{(bCats[hoverSlice].wk/forecast.wkExp*100).toFixed(1)}%</div>
                 </div>:<div>
                   <div style={{fontSize:10,color:P.txD}}>Total</div>
@@ -1277,20 +1275,14 @@ export default function App({ initialData, onDataChange, theme }){
                 {l:"Avg Net /wk",v:insights.nw?cf/insights.nw:0,g:true},
                 {l:"Net Cashflow",v:cf,g:true}
               ];
-              return <>
-              <div style={{display:"grid",gridTemplateColumns:isXWide?"repeat(4, 1fr)":"1fr 1fr",gap:10}}>
-                {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-                  <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>{s.l}</div>
-                  <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
+              const allStats=[...stats,{l:"Closing Balance",v:endBal,g:true}];
+              return <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                {allStats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:"14px 16px",border:"1px solid "+P.bd,flex:"1 1 0",minWidth:120}}>
+                  <div style={{fontSize:10,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>{s.l}</div>
+                  <div style={{fontSize:18,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
                     color:s.fmt===false?P.tx:s.g?(s.v>=0?P.pos:P.neg):P.tx}}>{s.fmt===false?s.v:fm(s.v)}</div>
                 </div>)}
-              </div>
-              <div style={{background:"linear-gradient(135deg, "+P.card+" 0%, rgba(74,222,128,0.05) 100%)",borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-                <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>Closing Balance</div>
-                <div style={{fontSize:28,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
-                  color:endBal>=0?P.pos:P.neg}}>{fm(endBal)}</div>
-              </div>
-              </>;
+              </div>;
             })()}
             {/* Best & Worst Weeks - side by side with colored left border */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -1323,12 +1315,16 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
             </div>
             {/* Pie + Bar - By Category with horizontal bars */}
-            {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+            {insights.grpTotals.length>0&&(()=>{
+              const grpMain=insights.grpTotals.filter(g=>g.total/insights.grpGrand>0.01);
+              const grpSmall=insights.grpTotals.filter(g=>g.total/insights.grpGrand<=0.01);
+              const pieData=grpSmall.length>0?[...grpMain,{n:"Other",c:P.txM,total:grpSmall.reduce((s,g)=>s+g.total,0),_items:grpSmall}]:grpMain;
+              return <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
               <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180,maxWidth:isWide?320:undefined}}>
                 <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
                 <div style={{position:"relative"}}>
                 <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
-                  {insights.grpTotals.reduce((acc,g,i)=>{
+                  {pieData.reduce((acc,g,i)=>{
                     const pct=g.total/insights.grpGrand;
                     const circ=Math.PI*2*35;
                     const dash=pct*circ;
@@ -1347,10 +1343,12 @@ export default function App({ initialData, onDataChange, theme }){
                   },{elems:[],offset:0}).elems}
                 </svg>
                 <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",textAlign:"center"}}>
-                  {hoverSlice!=null?<div>
-                    <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{insights.grpTotals[hoverSlice].n}</div>
-                    <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpTotals[hoverSlice].total/insights.nw)}/wk</div>
-                    <div style={{fontSize:10,color:P.txM}}>{(insights.grpTotals[hoverSlice].total/insights.grpGrand*100).toFixed(1)}%</div>
+                  {hoverSlice!=null&&pieData[hoverSlice]?<div>
+                    <div style={{fontSize:10,color:P.txD,fontWeight:500}}>{pieData[hoverSlice].n}</div>
+                    {pieData[hoverSlice]._items?<div style={{fontSize:8,color:P.txM,maxWidth:80}}>
+                      {pieData[hoverSlice]._items.map(it=>it.n+": "+fm(it.total/insights.nw)+"/wk").join(", ")}
+                    </div>:<div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(pieData[hoverSlice].total/insights.nw)}/wk</div>}
+                    <div style={{fontSize:10,color:P.txM}}>{(pieData[hoverSlice].total/insights.grpGrand*100).toFixed(1)}%</div>
                   </div>:<div>
                     <div style={{fontSize:10,color:P.txD}}>Total</div>
                     <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand/insights.nw)}/wk</div>
@@ -1360,8 +1358,8 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
               <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:2,minWidth:250}}>
                 <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>By Category</div>
-                {insights.grpTotals.map((g,i)=>{
-                  const maxT=insights.grpTotals[0]?insights.grpTotals[0].total:1;
+                {pieData.map((g,i)=>{
+                  const maxT=pieData[0]?pieData[0].total:1;
                   const isH=hoverSlice===i;
                   return <div key={g.n} onMouseEnter={()=>setHoverSlice(i)} onMouseLeave={()=>setHoverSlice(null)}
                     style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,cursor:"pointer",
@@ -1377,7 +1375,7 @@ export default function App({ initialData, onDataChange, theme }){
                   </div>;
                 })}
               </div>
-            </div>}
+            </div>;})()}
             {insights.compWks.length>1&&(()=>{
               const nets=insights.compWks.map(wi=>({wi,net:wT[wi].net}));
               const maxAbs=Math.max(...nets.map(n=>Math.abs(n.net)),1);
@@ -1414,11 +1412,11 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
             </div>;
             })()}
-            {/* Top Expense Categories + Income Sources wrapper */}
+            {/* Top Spending Items + Income Sources wrapper */}
             <div style={{display:isWide?"grid":"contents",gridTemplateColumns:isWide?"1fr 1fr":undefined,gap:14,alignItems:"start"}}>
-            {/* Top Expense Categories - with rank badges */}
+            {/* Top Spending Items - with rank badges */}
             <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Top Spending Categories</div>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Top Spending Items</div>
               {insights.catTotals.slice(0,10).map((ct,i)=>{
                 return <div key={ct.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"4px 0"}}>
                   <div style={{width:24,height:24,borderRadius:6,background:P.w06,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:P.txD,flexShrink:0}}>{i+1}</div>
