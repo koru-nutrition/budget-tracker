@@ -1583,13 +1583,13 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
           :
             <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
-              <div ref={scrollRef} style={{overflowX:"auto"}}>
+              <div ref={scrollRef} style={{overflow:"auto",maxHeight:"70vh"}}>
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr>
-                    <th style={{...stL,padding:"6px 12px",textAlign:"left",fontSize:9,color:P.txM,fontWeight:600,background:P.card,borderBottom:"2px solid "+P.bd,minWidth:130}}>Category</th>
+                    <th style={{...stL,padding:"6px 12px",textAlign:"left",fontSize:9,color:P.txM,fontWeight:600,background:P.card,borderBottom:"2px solid "+P.bd,minWidth:130,position:"sticky",left:0,top:0,zIndex:4}}>Category</th>
                     {fyWis.map(wi=>{const s=getStat(wi);const st=statStyle(s);const pre=wi<startWeek;
                       return <th key={wi} style={{padding:"5px 6px",textAlign:"center",fontSize:9,fontWeight:600,
-                        background:pre?P.w02:st.bg,borderBottom:"2px solid "+(pre?P.bd:st.bd),color:pre?P.txM:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85}}>
+                        background:pre?P.w02:st.bg,borderBottom:"2px solid "+(pre?P.bd:st.bd),color:pre?P.txM:s==="c"?P.pos:s==="u"?P.ac:s==="s"?P.warn:P.txM,minWidth:85,position:"sticky",top:0,zIndex:3}}>
                         <div>{fd(new Date(W[wi].getTime()-6*864e5))}</div>
                         <div style={{fontSize:8,fontWeight:400,color:pre?P.txM:P.txM}}>{fdr(new Date(W[wi].getTime()-6*864e5))}–{fdr(W[wi])}</div>
                       </th>
