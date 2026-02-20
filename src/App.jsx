@@ -1367,6 +1367,10 @@ export default function App({ initialData, onDataChange, theme }){
                     <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right"}}>{(g.total/insights.grpGrand*100).toFixed(0)}%</span>
                   </div>;
                 })}
+                <div style={{borderTop:"1px solid "+P.bdL,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between"}}>
+                  <span style={{fontSize:10,fontWeight:600,color:P.neg}}>Total</span>
+                  <span style={{fontSize:10,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand/insights.nw)}/wk</span>
+                </div>
               </div>
             </div>}
             {insights.compWks.length>1&&(()=>{
