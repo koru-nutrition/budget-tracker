@@ -92,6 +92,21 @@ const LIGHT_P={
 };
 const ACCT_COLORS=["#60A5FA","#4ADE80","#FBBF24","#A78BFA","#F87171","#38BDF8","#E879F9","#34D399","#FB923C","#C084FC"];
 
+// ─── Debt types ───
+const DEBT_TYPES=[
+  {id:"credit_card",label:"Credit Card",icon:"💳"},
+  {id:"personal_loan",label:"Personal Loan",icon:"📋"},
+  {id:"mortgage",label:"Mortgage",icon:"🏠"},
+  {id:"car_loan",label:"Car Loan",icon:"🚗"},
+  {id:"student_loan",label:"Student Loan",icon:"🎓"},
+  {id:"medical",label:"Medical Debt",icon:"🏥"},
+  {id:"store_credit",label:"Store Credit/Finance",icon:"🏪"},
+  {id:"hire_purchase",label:"Hire Purchase",icon:"📦"},
+  {id:"overdraft",label:"Overdraft",icon:"🏦"},
+  {id:"other",label:"Other",icon:"📄"},
+];
+const DEBT_TYPE_MAP=Object.fromEntries(DEBT_TYPES.map(t=>[t.id,t]));
+
 // FY boundaries: FY26 ends at week containing March 31
 
 
@@ -186,6 +201,12 @@ export default function App({ initialData, onDataChange, theme }){
   const[impCurWk,setImpCurWk]=useState(0);
   const[confetti,setConfetti]=useState(false);
   const[particles,setParts]=useState([]);
+  // Debt state
+  const[debts,setDebts]=useState([]);// array of debt objects
+  const[debtModal,setDebtModal]=useState(null);// null | "add" | debt object (edit)
+  const[debtView,setDebtView]=useState(null);// null | debt id (individual view)
+  const[debtChargeModal,setDebtChargeModal]=useState(null);// debt id for adding a charge
+  const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
 
   // ─── Responsive width tracking ───
   const[windowWidth,setWindowWidth]=useState(typeof window!=="undefined"?window.innerWidth:800);
@@ -194,7 +215,7 @@ export default function App({ initialData, onDataChange, theme }){
   const isXWide=windowWidth>=1600;
 
   // ─── Scroll lock when any modal is open ───
-  const anyModalOpen=catEditorOpen||budgetOpen||settingsOpen||impOpen||!!cellDetail||!!insCatModal||!!dashCatModal;
+  const anyModalOpen=catEditorOpen||budgetOpen||settingsOpen||impOpen||!!cellDetail||!!insCatModal||!!dashCatModal||!!debtModal||!!debtChargeModal||!!debtExtraModal;
   useEffect(()=>{
     if(anyModalOpen){document.body.style.overflow="hidden"}
     else{document.body.style.overflow=""}
@@ -212,15 +233,16 @@ export default function App({ initialData, onDataChange, theme }){
       if(s.inc)setINC(s.inc);if(s.ecat)setECAT(s.ecat);
       if(s.sw!=null)setStartWeek(s.sw);
       if(s.ob!=null)setOpeningBalance(s.ob);
+      if(s.db)setDebts(s.db);
     }
     setReady(true);
   },[]);// eslint-disable-line
   // ─── Save to Firebase (via props) ───
   useEffect(()=>{
     if(!ready)return;
-    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance};
+    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts};
     if(onDataChange)onDataChange(data);
-  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance]);// eslint-disable-line
+  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts]);// eslint-disable-line
 
   // ─── Confetti ───
   useEffect(()=>{
@@ -587,6 +609,70 @@ export default function App({ initialData, onDataChange, theme }){
     return{fInc,fExp,fBal,wkInc:wkIncAvg,wkExp:wkExpAvg,wkNet:wkIncAvg-wkExpAvg,lastActual,projCat};
   },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData]);
 
+  // ─── Debt computations ───
+  const debtInfos=useMemo(()=>{
+    const now=new Date();
+    // Find current week index by date
+    let endWi=0;
+    for(let i=0;i<W.length;i++){const sun=W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){endWi=i;break}if(now<mon){endWi=Math.max(0,i-1);break}if(i===W.length-1)endWi=i}
+    return debts.map(debt=>{
+      const balDate=new Date(debt.balanceDate);
+      let startWi=0;
+      for(let i=0;i<W.length;i++){if(balDate<=W[i]){startWi=i;break}if(i===W.length-1)startWi=i}
+      let bal=debt.balance;
+      const moRate=(debt.interestRate||0)/12/100;
+      let totInt=0,totPaid=0;
+      let prevMo=balDate.getMonth();
+      const hist=[];
+      const manual=[
+        ...(debt.charges||[]).map(c=>({...c,_t:"charge",_d:new Date(c.date)})),
+        ...(debt.extraPayments||[]).map(e=>({...e,_t:"extra",_d:new Date(e.date)})),
+      ].sort((a,b)=>a._d-b._d);
+      let mi=0;
+      for(let wi=startWi;wi<=endWi;wi++){
+        const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
+        const cm=sun.getMonth();
+        if(cm!==prevMo&&bal>0){const interest=Math.round(bal*moRate*100)/100;bal+=interest;totInt+=interest}
+        prevMo=cm;
+        while(mi<manual.length&&manual[mi]._d<=sun){
+          const t=manual[mi];
+          if(t._t==="charge"){bal+=t.amount;hist.push({date:t.date,amount:-t.amount,desc:t.description||"Charge",type:"charge"})}
+          else{bal-=t.amount;totPaid+=t.amount;hist.push({date:t.date,amount:t.amount,desc:t.note||"Extra payment",type:"extra"})}
+          mi++;
+        }
+        if(debt.linkedCatId&&catData[debt.linkedCatId]){
+          const pay=catData[debt.linkedCatId][wi];
+          if(pay!=null&&pay>0){bal-=pay;totPaid+=pay;hist.push({date:fd(mon),amount:pay,desc:"Cashflow payment",type:"cashflow",wi})}
+        }
+      }
+      while(mi<manual.length){const t=manual[mi];if(t._t==="charge")bal+=t.amount;else{bal-=t.amount;totPaid+=t.amount}mi++}
+      bal=Math.round(bal*100)/100;
+      const bgt=debt.linkedCatId?budgets[debt.linkedCatId]:null;
+      const wkPay=bgt&&bgt.amt?freqToWeekly(bgt.amt,bgt.freq||"w"):0;
+      const moPay=wkPay*52/12;
+      let projDate=null,projMo=null;
+      if(bal>0&&moPay>0){
+        if(moRate>0){if(moPay<=bal*moRate)projMo=Infinity;else projMo=Math.ceil(-Math.log(1-moRate*bal/moPay)/Math.log(1+moRate))}
+        else projMo=Math.ceil(bal/moPay);
+        if(projMo!==Infinity){projDate=new Date();projDate.setMonth(projDate.getMonth()+projMo)}
+      }
+      const progress=debt.balance>0?Math.min(100,Math.max(0,(1-Math.max(0,bal)/debt.balance)*100)):(bal<=0?100:0);
+      return{...debt,currentBalance:Math.max(0,bal),totalInterest:totInt,totalPaid:totPaid,paymentHistory:hist.slice().reverse(),
+        weeklyPayment:wkPay,monthlyPayment:moPay,projPayoffDate:projDate,projMonths:projMo,progress};
+    });
+  },[debts,catData,budgets,W,freqToWeekly]);
+
+  // ─── Auto-detect debt payoffs ───
+  const debtPaidRef=useRef(new Set());
+  useEffect(()=>{
+    const newlyPaid=debtInfos.filter(d=>d.currentBalance<=0&&!d.paidOff&&!debtPaidRef.current.has(d.id));
+    if(newlyPaid.length>0){
+      newlyPaid.forEach(d=>debtPaidRef.current.add(d.id));
+      setDebts(prev=>prev.map(d=>{if(newlyPaid.some(np=>np.id===d.id))return{...d,paidOff:true,paidOffDate:new Date().toISOString().slice(0,10)};return d}));
+      setConfetti(true);
+    }
+  },[debtInfos]);
+
   // ─── Insights: computed from past CATEGORY data, filtered by range ───
   const insights=useMemo(()=>{
     const compWks=[];for(let i=insStart;i<=insEnd&&i<NW;i++)if(comp[i])compWks.push(i);
@@ -700,8 +786,8 @@ export default function App({ initialData, onDataChange, theme }){
           })()}
         </div>
         {startWeek!=null&&<div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"nowrap",overflow:"auto"}}>
-          {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"]].map(([k,l])=>
-            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0)}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid "+P.w12:"1px solid transparent",
+          {[["week","This Week"],["dash","Dashboard"],["insights","Insights"],["cash","Cashflow"],["debt","Debt"]].map(([k,l])=>
+            <button key={k} onClick={()=>{setTab(k);if(k==="week")setWeekOffset(0);if(k==="debt"){setDebtView(null)}}} style={{padding:"8px 18px",borderRadius:10,border:tab===k?"1px solid "+P.w12:"1px solid transparent",
               background:tab===k?P.w10:"transparent",color:tab===k?P.tx:P.txD,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44,transition:"all 0.15s ease",flexShrink:0,whiteSpace:"nowrap"}}>{l}</button>
           )}
         </div>}
@@ -1629,6 +1715,429 @@ export default function App({ initialData, onDataChange, theme }){
           ;})()}
         </div>}
       </div>
+
+      {/* ═══ DEBT TAB ═══ */}
+      {startWeek!=null&&tab==="debt"&&(()=>{
+        const activeDebts=debtInfos.filter(d=>!d.paidOff&&!d.dismissed).sort((a,b)=>a.currentBalance-b.currentBalance);
+        const paidOffDebts=debtInfos.filter(d=>d.paidOff&&!d.dismissed);
+        const totalDebt=activeDebts.reduce((s,d)=>s+d.currentBalance,0);
+        const totalMonthly=activeDebts.reduce((s,d)=>s+d.monthlyPayment,0);
+        const totalOriginal=activeDebts.reduce((s,d)=>s+d.balance,0);
+        const overallProgress=totalOriginal>0?Math.min(100,Math.max(0,(1-totalDebt/totalOriginal)*100)):0;
+
+        // ─── Individual debt view ───
+        if(debtView){
+          const di=debtInfos.find(d=>d.id===debtView);
+          if(!di)return <div style={{textAlign:"center",padding:40,color:P.txD}}>Debt not found</div>;
+          const dt=DEBT_TYPE_MAP[di.type]||DEBT_TYPE_MAP.other;
+          return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button onClick={()=>setDebtView(null)} style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Back</button>
+              <div style={{flex:1}}>
+                <div style={{fontSize:18,fontWeight:700}}>{dt.icon} {di.name}</div>
+                <div style={{fontSize:10,color:P.txD}}>{dt.label}{di.interestRate>0?" · "+di.interestRate+"% p.a.":""}</div>
+              </div>
+              <button onClick={()=>setDebtModal(di)} style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>Edit</button>
+            </div>
+
+            {/* Paid off celebration */}
+            {di.paidOff&&<div style={{background:"linear-gradient(135deg, rgba(74,222,128,0.15), rgba(96,165,250,0.1))",border:"2px solid "+P.pos,borderRadius:16,padding:28,textAlign:"center"}}>
+              <div style={{fontSize:48,marginBottom:8}}>🎉</div>
+              <div style={{fontSize:22,fontWeight:800,color:P.pos,marginBottom:4}}>PAID OFF!</div>
+              <div style={{fontSize:13,color:P.tx,marginBottom:2}}>Congratulations! You cleared this debt!</div>
+              {di.paidOffDate&&<div style={{fontSize:10,color:P.txD}}>Paid off on {di.paidOffDate}</div>}
+              <div style={{marginTop:12,display:"flex",gap:8,justifyContent:"center"}}>
+                <button onClick={()=>setConfetti(true)} style={{padding:"8px 18px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Celebrate Again! 🎊</button>
+                <button onClick={()=>setDebts(prev=>prev.map(d=>d.id===di.id?{...d,dismissed:true}:d))}
+                  style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Dismiss</button>
+              </div>
+            </div>}
+
+            {/* Balance & progress card */}
+            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+                <div>
+                  <div style={{fontSize:10,color:P.txD,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>Current Balance</div>
+                  <div style={{fontSize:28,fontWeight:800,color:di.currentBalance>0?P.neg:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(di.currentBalance)}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:10,color:P.txD,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>Original Balance</div>
+                  <div style={{fontSize:16,fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(di.balance)}</div>
+                  <div style={{fontSize:9,color:P.txM}}>as of {di.balanceDate}</div>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:10,fontWeight:600,color:P.pos}}>{di.progress.toFixed(1)}% paid off</span>
+                  <span style={{fontSize:10,color:P.txD}}>{fm(di.totalPaid)} paid · {fm(di.totalInterest)} interest</span>
+                </div>
+                <div style={{height:12,background:P.w06,borderRadius:6,overflow:"hidden",position:"relative"}}>
+                  <div style={{height:"100%",width:di.progress+"%",background:"linear-gradient(90deg, "+P.pos+", "+P.ac+")",borderRadius:6,transition:"width .5s ease"}}/>
+                </div>
+              </div>
+              {/* Stats row */}
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {[
+                  {l:"Weekly Payment",v:fm(di.weeklyPayment),c:P.tx},
+                  {l:"Monthly Payment",v:fm(di.monthlyPayment),c:P.tx},
+                  {l:"Projected Payoff",v:di.projPayoffDate?di.projPayoffDate.toLocaleDateString("en-NZ",{month:"short",year:"numeric"}):(di.projMonths===Infinity?"Never (underpaying)":"No budget set"),c:di.projPayoffDate?P.ac:(di.projMonths===Infinity?P.neg:P.txM)},
+                  {l:"Months Remaining",v:di.projMonths===Infinity?"∞":(di.projMonths!=null?di.projMonths:"—"),c:P.tx},
+                ].map(s=><div key={s.l} style={{flex:"1 1 120px",background:P.w03,borderRadius:8,padding:"8px 10px"}}>
+                  <div style={{fontSize:8,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{s.l}</div>
+                  <div style={{fontSize:14,fontWeight:700,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{s.v}</div>
+                </div>)}
+              </div>
+            </div>
+
+            {/* Linked category */}
+            {di.linkedCatId&&<div style={{background:P.card,borderRadius:16,padding:16,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:10,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>Linked Cashflow Category</div>
+              <div style={{fontSize:13,fontWeight:600,color:P.tx}}>{(()=>{const cat=ALL_CATS.find(c=>c.id===di.linkedCatId);return cat?cat.n:di.linkedCatId})()}</div>
+              <div style={{fontSize:9,color:P.txD,marginTop:2}}>Payments in this category automatically reduce your debt balance</div>
+            </div>}
+
+            {/* Actions */}
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {(di.type==="credit_card"||di.type==="store_credit")?
+                <button onClick={()=>setDebtChargeModal(di.id)} style={{flex:1,padding:"10px 18px",borderRadius:10,border:"none",background:P.negL,color:P.neg,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Charge</button>
+              :<button onClick={()=>setDebtChargeModal(di.id)} style={{flex:1,padding:"10px 18px",borderRadius:10,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Increase Balance</button>}
+              <button onClick={()=>setDebtExtraModal(di.id)} style={{flex:1,padding:"10px 18px",borderRadius:10,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Extra Payment</button>
+            </div>
+
+            {/* Payment history */}
+            <div style={{background:P.card,borderRadius:16,padding:16,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Payment History</div>
+              {di.paymentHistory.length===0?
+                <div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>No payments recorded yet</div>
+              :<div style={{borderRadius:8,border:"1px solid "+P.bd,overflow:"hidden",maxHeight:300,overflowY:"auto"}}>
+                {di.paymentHistory.map((ph,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderBottom:idx<di.paymentHistory.length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
+                  <div style={{width:8,height:8,borderRadius:4,flexShrink:0,background:ph.type==="cashflow"?P.ac:ph.type==="extra"?P.blue:P.neg}}/>
+                  <div style={{flex:"0 0 65px",color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9}}>{ph.date}</div>
+                  <div style={{flex:1,color:P.tx}}>{ph.desc}</div>
+                  <div style={{fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:ph.amount>0?P.pos:P.neg}}>{ph.amount>0?"-":"+"}${Math.abs(ph.amount).toFixed(2)}</div>
+                </div>)}
+              </div>}
+            </div>
+
+            {/* Charges (credit cards) */}
+            {(di.charges||[]).length>0&&<div style={{background:P.card,borderRadius:16,padding:16,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Charges</div>
+              <div style={{borderRadius:8,border:"1px solid "+P.bd,overflow:"hidden"}}>
+                {(di.charges||[]).map((ch,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderBottom:idx<(di.charges||[]).length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
+                  <div style={{flex:"0 0 65px",color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9}}>{ch.date}</div>
+                  <div style={{flex:1,color:P.tx}}>{ch.description||"Charge"}</div>
+                  <div style={{fontWeight:600,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>+${ch.amount.toFixed(2)}</div>
+                  <button onClick={()=>setDebts(prev=>prev.map(d=>d.id===di.id?{...d,charges:(d.charges||[]).filter((_,i)=>i!==idx)}:d))}
+                    style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
+                </div>)}
+              </div>
+            </div>}
+
+            {/* Extra payments */}
+            {(di.extraPayments||[]).length>0&&<div style={{background:P.card,borderRadius:16,padding:16,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Extra Payments</div>
+              <div style={{borderRadius:8,border:"1px solid "+P.bd,overflow:"hidden"}}>
+                {(di.extraPayments||[]).map((ep,idx)=><div key={idx} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderBottom:idx<(di.extraPayments||[]).length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
+                  <div style={{flex:"0 0 65px",color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9}}>{ep.date}</div>
+                  <div style={{flex:1,color:P.tx}}>{ep.note||"Extra payment"}</div>
+                  <div style={{fontWeight:600,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>-${ep.amount.toFixed(2)}</div>
+                  <button onClick={()=>setDebts(prev=>prev.map(d=>d.id===di.id?{...d,extraPayments:(d.extraPayments||[]).filter((_,i)=>i!==idx)}:d))}
+                    style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
+                </div>)}
+              </div>
+            </div>}
+
+            {/* Delete */}
+            <div style={{display:"flex",justifyContent:"flex-end"}}>
+              <button onClick={()=>{if(confirm("Delete this debt? This cannot be undone.")){setDebts(prev=>prev.filter(d=>d.id!==di.id));setDebtView(null)}}}
+                style={{padding:"8px 18px",borderRadius:8,border:"none",background:P.negL,color:P.neg,fontSize:10,fontWeight:600,cursor:"pointer",minHeight:44}}>Delete Debt</button>
+            </div>
+          </div>;
+        }
+
+        // ─── Summary view ───
+        return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+            <div>
+              <div style={{fontSize:18,fontWeight:700}}>Debt Snowball</div>
+              <div style={{fontSize:10,color:P.txM}}>Track and eliminate your debts, smallest to largest</div>
+            </div>
+            <button onClick={()=>setDebtModal("add")}
+              style={{background:P.acL,border:"none",borderRadius:8,padding:"8px 14px",color:P.ac,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:44}}>+ Add Debt</button>
+          </div>
+
+          {/* Overall summary card */}
+          {debts.length>0&&<div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
+              {[
+                {l:"Total Debt",v:fm(totalDebt),c:totalDebt>0?P.neg:P.pos},
+                {l:"Monthly Payments",v:fm(totalMonthly),c:P.tx},
+                {l:"Active Debts",v:activeDebts.length,c:P.tx},
+                {l:"Paid Off",v:paidOffDebts.length,c:P.pos},
+              ].map(s=><div key={s.l} style={{flex:"1 1 100px",textAlign:"center"}}>
+                <div style={{fontSize:8,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{s.l}</div>
+                <div style={{fontSize:18,fontWeight:800,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{s.v}</div>
+              </div>)}
+            </div>
+            {totalOriginal>0&&<div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:9,fontWeight:600,color:P.pos}}>{overallProgress.toFixed(1)}% of total debt eliminated</span>
+                <span style={{fontSize:9,color:P.txD}}>{fm(totalOriginal-totalDebt)} paid off of {fm(totalOriginal)}</span>
+              </div>
+              <div style={{height:8,background:P.w06,borderRadius:4,overflow:"hidden"}}>
+                <div style={{height:"100%",width:overallProgress+"%",background:"linear-gradient(90deg, "+P.pos+", "+P.ac+")",borderRadius:4,transition:"width .5s ease"}}/>
+              </div>
+            </div>}
+          </div>}
+
+          {/* Empty state */}
+          {debts.length===0&&<div style={{background:P.card,borderRadius:16,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
+            <div style={{fontSize:40,marginBottom:8}}>💪</div>
+            <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>Start Your Debt-Free Journey</div>
+            <div style={{fontSize:11,color:P.txM,marginBottom:16}}>Add your debts to track payoff progress and see when you'll be debt-free</div>
+            <button onClick={()=>setDebtModal("add")}
+              style={{padding:"10px 24px",borderRadius:10,border:"none",background:P.acL,color:P.ac,fontSize:12,fontWeight:600,cursor:"pointer",minHeight:44}}>Add Your First Debt</button>
+          </div>}
+
+          {/* Active debts (snowball order: smallest balance first) */}
+          {activeDebts.length>0&&<div>
+            <div style={{fontSize:11,fontWeight:700,color:P.tx,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Active Debts</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {activeDebts.map((di,idx)=>{
+                const dt=DEBT_TYPE_MAP[di.type]||DEBT_TYPE_MAP.other;
+                const isFirst=idx===0&&activeDebts.length>1;
+                return <div key={di.id} onClick={()=>setDebtView(di.id)}
+                  style={{background:P.card,borderRadius:14,padding:16,border:isFirst?"2px solid "+P.ac:"1px solid "+P.bd,cursor:"pointer",transition:"all 0.15s ease",position:"relative",overflow:"hidden"}}>
+                  {isFirst&&<div style={{position:"absolute",top:8,right:10,fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:".04em"}}>Focus Here</div>}
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                    <div style={{fontSize:24}}>{dt.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:P.tx}}>{di.name}</div>
+                      <div style={{fontSize:9,color:P.txD}}>{dt.label}{di.interestRate>0?" · "+di.interestRate+"% p.a.":""}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:16,fontWeight:800,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(di.currentBalance)}</div>
+                      <div style={{fontSize:8,color:P.txM}}>of {fm(di.balance)}</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{marginBottom:6}}>
+                    <div style={{height:6,background:P.w06,borderRadius:3,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:di.progress+"%",background:isFirst?"linear-gradient(90deg, "+P.pos+", "+P.ac+")":P.pos,borderRadius:3,transition:"width .5s ease"}}/>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:9}}>
+                    <span style={{color:P.pos,fontWeight:600}}>{di.progress.toFixed(1)}%</span>
+                    <span style={{color:P.txD}}>{fm(di.monthlyPayment)}/mo</span>
+                    <span style={{color:di.projPayoffDate?P.ac:(di.projMonths===Infinity?P.neg:P.txM),fontWeight:500}}>
+                      {di.projPayoffDate?"Payoff: "+di.projPayoffDate.toLocaleDateString("en-NZ",{month:"short",year:"numeric"}):(di.projMonths===Infinity?"Underpaying interest":"No budget")}
+                    </span>
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>}
+
+          {/* Paid off debts */}
+          {paidOffDebts.length>0&&<div>
+            <div style={{fontSize:11,fontWeight:700,color:P.pos,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>🎉 Paid Off</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {paidOffDebts.map(di=>{
+                const dt=DEBT_TYPE_MAP[di.type]||DEBT_TYPE_MAP.other;
+                return <div key={di.id} onClick={()=>setDebtView(di.id)}
+                  style={{background:"linear-gradient(135deg, rgba(74,222,128,0.06), rgba(74,222,128,0.02))",borderRadius:14,padding:14,border:"1px solid "+P.pos+"33",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:20}}>{dt.icon}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:12,fontWeight:700,color:P.pos}}>{di.name} ✓</div>
+                      <div style={{fontSize:9,color:P.txD}}>{dt.label} · Paid off {di.paidOffDate||""}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:P.pos}}>$0.00</div>
+                      <div style={{fontSize:8,color:P.txD}}>was {fm(di.balance)}</div>
+                    </div>
+                    <button onClick={e=>{e.stopPropagation();setDebts(prev=>prev.map(d=>d.id===di.id?{...d,dismissed:true}:d))}}
+                      style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.txM,padding:"4px"}}>✕</button>
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>}
+
+          {/* Snowball info */}
+          {activeDebts.length>1&&<div style={{background:P.w02,borderRadius:12,padding:14,border:"1px solid "+P.bdL}}>
+            <div style={{fontSize:10,fontWeight:600,color:P.ac,marginBottom:4}}>Debt Snowball Strategy</div>
+            <div style={{fontSize:10,color:P.txD,lineHeight:1.5}}>
+              Focus on paying off <strong style={{color:P.tx}}>{activeDebts[0]?.name}</strong> first (smallest balance at {fm(activeDebts[0]?.currentBalance)}).
+              Make minimum payments on everything else. Once it's paid off, roll that payment into the next debt for faster payoff!
+            </div>
+          </div>}
+        </div>;
+      })()}
+
+      {/* ═══ DEBT ADD/EDIT MODAL ═══ */}
+      {debtModal!=null&&(()=>{
+        const isEdit=debtModal!=="add";
+        const existing=isEdit?debtModal:null;
+        const ModalInner=()=>{
+          const[dName,setDName]=useState(existing?.name||"");
+          const[dType,setDType]=useState(existing?.type||"credit_card");
+          const[dRate,setDRate]=useState(existing?.interestRate!=null?String(existing.interestRate):"");
+          const[dBal,setDBal]=useState(existing?.balance!=null?String(existing.balance):"");
+          const[dDate,setDDate]=useState(existing?.balanceDate||new Date().toISOString().slice(0,10));
+          const[dLinked,setDLinked]=useState(existing?.linkedCatId||"");
+          const[dMin,setDMin]=useState(existing?.minimumPayment!=null?String(existing.minimumPayment):"");
+          const save=()=>{
+            if(!dName.trim()||!dBal)return;
+            const debt={
+              id:existing?.id||("d_"+Date.now().toString(36)),
+              name:dName.trim(),type:dType,
+              interestRate:parseFloat(dRate)||0,
+              balance:parseFloat(dBal)||0,
+              balanceDate:dDate,
+              linkedCatId:dLinked||null,
+              minimumPayment:parseFloat(dMin)||null,
+              paidOff:existing?.paidOff||false,
+              paidOffDate:existing?.paidOffDate||null,
+              dismissed:existing?.dismissed||false,
+              charges:existing?.charges||[],
+              extraPayments:existing?.extraPayments||[],
+            };
+            if(isEdit)setDebts(prev=>prev.map(d=>d.id===debt.id?debt:d));
+            else setDebts(prev=>[...prev,debt]);
+            setDebtModal(null);
+          };
+          const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
+          const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
+          return <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:16,fontWeight:700}}>{isEdit?"Edit Debt":"Add Debt"}</div>
+              <button onClick={()=>setDebtModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div><label style={labelStyle}>Name</label>
+                <input value={dName} onChange={e=>setDName(e.target.value)} placeholder="e.g. ASB Credit Card" style={inputStyle}/></div>
+              <div><label style={labelStyle}>Type</label>
+                <select value={dType} onChange={e=>setDType(e.target.value)} style={inputStyle}>
+                  {DEBT_TYPES.map(t=><option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
+                </select></div>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><label style={labelStyle}>Interest Rate (% p.a.)</label>
+                  <input type="number" step="0.01" min="0" value={dRate} onChange={e=>setDRate(e.target.value)} placeholder="e.g. 22.95" style={inputStyle}/></div>
+                <div style={{flex:1}}><label style={labelStyle}>Minimum Payment ($/mo)</label>
+                  <input type="number" step="0.01" min="0" value={dMin} onChange={e=>setDMin(e.target.value)} placeholder="Optional" style={inputStyle}/></div>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><label style={labelStyle}>Current Balance ($)</label>
+                  <input type="number" step="0.01" min="0" value={dBal} onChange={e=>setDBal(e.target.value)} placeholder="e.g. 5000" style={inputStyle}/></div>
+                <div style={{flex:1}}><label style={labelStyle}>Balance Date</label>
+                  <input type="date" value={dDate} onChange={e=>setDDate(e.target.value)} style={inputStyle}/></div>
+              </div>
+              <div><label style={labelStyle}>Link to Cashflow Category</label>
+                <select value={dLinked} onChange={e=>setDLinked(e.target.value)} style={inputStyle}>
+                  <option value="">— None —</option>
+                  {ECAT.map(grp=><optgroup key={grp.n} label={grp.n}>
+                    {grp.items.map(it=><option key={it.id} value={it.id}>{it.n}</option>)}
+                  </optgroup>)}
+                </select>
+                <div style={{fontSize:9,color:P.txD,marginTop:3}}>Payments against this category will automatically reduce your debt balance</div>
+              </div>
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:18}}>
+              <button onClick={()=>setDebtModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+              <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>{isEdit?"Save Changes":"Add Debt"}</button>
+            </div>
+          </div>;
+        };
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
+            <ModalInner/>
+          </div>
+        </div>;
+      })()}
+
+      {/* ═══ DEBT CHARGE MODAL ═══ */}
+      {debtChargeModal!=null&&(()=>{
+        const ChgInner=()=>{
+          const[chAmt,setChAmt]=useState("");
+          const[chDesc,setChDesc]=useState("");
+          const[chDate,setChDate]=useState(new Date().toISOString().slice(0,10));
+          const save=()=>{
+            const amt=parseFloat(chAmt);
+            if(!amt||amt<=0)return;
+            setDebts(prev=>prev.map(d=>d.id===debtChargeModal?{...d,charges:[...(d.charges||[]),{date:chDate,description:chDesc.trim()||"Charge",amount:amt}]}:d));
+            setDebtChargeModal(null);
+          };
+          const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
+          return <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:16,fontWeight:700}}>Add Charge / Balance Increase</div>
+              <button onClick={()=>setDebtChargeModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Amount ($)</label>
+                  <input type="number" step="0.01" min="0" value={chAmt} onChange={e=>setChAmt(e.target.value)} placeholder="0.00" style={inputStyle} autoFocus/></div>
+                <div style={{flex:1}}><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Date</label>
+                  <input type="date" value={chDate} onChange={e=>setChDate(e.target.value)} style={inputStyle}/></div>
+              </div>
+              <div><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Description</label>
+                <input value={chDesc} onChange={e=>setChDesc(e.target.value)} placeholder="e.g. Groceries, Fuel" style={inputStyle}/></div>
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:18}}>
+              <button onClick={()=>setDebtChargeModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+              <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.negL,color:P.neg,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add Charge</button>
+            </div>
+          </div>;
+        };
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtChargeModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:440,width:"92%",border:"1px solid "+P.bd}}>
+            <ChgInner/>
+          </div>
+        </div>;
+      })()}
+
+      {/* ═══ DEBT EXTRA PAYMENT MODAL ═══ */}
+      {debtExtraModal!=null&&(()=>{
+        const ExInner=()=>{
+          const[exAmt,setExAmt]=useState("");
+          const[exNote,setExNote]=useState("");
+          const[exDate,setExDate]=useState(new Date().toISOString().slice(0,10));
+          const save=()=>{
+            const amt=parseFloat(exAmt);
+            if(!amt||amt<=0)return;
+            setDebts(prev=>prev.map(d=>d.id===debtExtraModal?{...d,extraPayments:[...(d.extraPayments||[]),{date:exDate,note:exNote.trim()||"Extra payment",amount:amt}]}:d));
+            setDebtExtraModal(null);
+          };
+          const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
+          return <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontSize:16,fontWeight:700}}>Add Extra Payment</div>
+              <button onClick={()=>setDebtExtraModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Amount ($)</label>
+                  <input type="number" step="0.01" min="0" value={exAmt} onChange={e=>setExAmt(e.target.value)} placeholder="0.00" style={inputStyle} autoFocus/></div>
+                <div style={{flex:1}}><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Date</label>
+                  <input type="date" value={exDate} onChange={e=>setExDate(e.target.value)} style={inputStyle}/></div>
+              </div>
+              <div><label style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"}}>Note</label>
+                <input value={exNote} onChange={e=>setExNote(e.target.value)} placeholder="e.g. Bonus payment, Tax refund" style={inputStyle}/></div>
+            </div>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:18}}>
+              <button onClick={()=>setDebtExtraModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+              <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add Payment</button>
+            </div>
+          </div>;
+        };
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtExtraModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:440,width:"92%",border:"1px solid "+P.bd}}>
+            <ExInner/>
+          </div>
+        </div>;
+      })()}
 
       {/* ═══ CATEGORY EDITOR MODAL ═══ */}
       {catEditorOpen&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
