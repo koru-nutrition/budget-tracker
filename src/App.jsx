@@ -151,6 +151,7 @@ export default function App({ initialData, onDataChange, theme }){
   const[hoverBar,setHoverBar]=useState(null);
   const[hoverSlice,setHoverSlice]=useState(null);
   const[insCatModal,setInsCatModal]=useState(null);// {n, c, items:[{id,n}]} for insights category modal
+  const[dashCatModal,setDashCatModal]=useState(null);// {n, c, items:[{id,n}]} for dashboard category modal
   // This Week tab state
   const[weekOffset,setWeekOffset]=useState(0);
   const[twAddOpen,setTwAddOpen]=useState(false);
@@ -191,6 +192,14 @@ export default function App({ initialData, onDataChange, theme }){
   useEffect(()=>{const onResize=()=>setWindowWidth(window.innerWidth);window.addEventListener("resize",onResize);return()=>window.removeEventListener("resize",onResize)},[]);
   const isWide=windowWidth>=1200;
   const isXWide=windowWidth>=1600;
+
+  // ─── Scroll lock when any modal is open ───
+  const anyModalOpen=catEditorOpen||budgetOpen||settingsOpen||impOpen||!!cellDetail||!!insCatModal||!!dashCatModal;
+  useEffect(()=>{
+    if(anyModalOpen){document.body.style.overflow="hidden"}
+    else{document.body.style.overflow=""}
+    return()=>{document.body.style.overflow=""};
+  },[anyModalOpen]);
 
   // ─── Persistence ───
   // ─── Load from Firebase (via props) ───
@@ -1158,7 +1167,7 @@ export default function App({ initialData, onDataChange, theme }){
           </div>
           {/* Budgeted Expenses: Pie + Bar */}
           {forecast.wkExp>0&&(()=>{
-            const bCatsRaw=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
+            const bCatsRaw=ECAT.map(cat=>({n:cat.n,c:cat.c,items:cat.items,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
             const bMain=bCatsRaw.filter(g=>g.wk/forecast.wkExp>0.01);
             const bSmall=bCatsRaw.filter(g=>g.wk/forecast.wkExp<=0.01);
             const bCats=bSmall.length>0?[...bMain,{n:"Other",c:P.txM,wk:bSmall.reduce((s,g)=>s+g.wk,0),_items:bSmall}]:bMain;
@@ -1179,6 +1188,7 @@ export default function App({ initialData, onDataChange, theme }){
                       strokeDasharray={dash+" "+gap2}
                       strokeDashoffset={-acc.offset}
                       onMouseEnter={()=>setHoverSlice(i)} onMouseLeave={()=>setHoverSlice(null)}
+                      onClick={()=>{if(!g._items)setDashCatModal(g)}}
                       style={{cursor:"pointer",transition:"stroke-width .15s",opacity:hoverSlice!=null&&!isH?0.35:0.85}}/>
                   );
                   acc.offset+=dash;
@@ -1204,6 +1214,7 @@ export default function App({ initialData, onDataChange, theme }){
               {bCats.map((g,i)=>{
                 const isH=hoverSlice===i;
                 return <div key={g.n} onMouseEnter={()=>setHoverSlice(i)} onMouseLeave={()=>setHoverSlice(null)}
+                  onClick={()=>{if(!g._items)setDashCatModal(g)}}
                   style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,cursor:"pointer",
                     opacity:hoverSlice!=null&&!isH?0.4:1,transition:"opacity .15s"}}>
                   <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:g.c,flexShrink:0}}/>
@@ -2042,6 +2053,143 @@ export default function App({ initialData, onDataChange, theme }){
 
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
               <button onClick={()=>setInsCatModal(null)} style={{padding:"8px 20px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44,fontWeight:500}}>Close</button>
+            </div>
+          </div>
+        </div>;
+      })()}
+
+      {/* ═══ DASHBOARD CATEGORY DETAIL MODAL ═══ */}
+      {dashCatModal!=null&&(()=>{
+        const cat=dashCatModal;
+        const wksInRange=dashEnd-dashStart+1;
+        const wksRem=Math.max(dashEnd-Math.max(dashStart,forecast.lastActual+1)+1,0);
+        // Per-item budget breakdown
+        const itemRows=(cat.items||[]).map(it=>{
+          const b=budgets[it.id]||{};
+          const wk=b.amt?freqToWeekly(b.amt,b.freq||"w"):0;
+          const freq=b.freq||"w";
+          const freqLabel=freq==="w"?"Weekly":freq==="f"?"Fortnightly":freq==="m"?"Monthly":freq==="q"?"Quarterly":"Weekly";
+          // Actual spend in range (from completed weeks)
+          let actualTotal=0;
+          for(let i=dashStart;i<=dashEnd&&i<NW;i++){if(comp[i]){const v=catData[it.id]&&catData[it.id][i];if(v!=null)actualTotal+=v}}
+          // Projected spend for future weeks in range
+          let projTotal=0;
+          for(let i=dashStart;i<=dashEnd&&i<NW;i++){if(!comp[i]&&i>forecast.lastActual){const pv=forecast.projCat[it.id]&&forecast.projCat[it.id][i];if(pv!=null)projTotal+=pv}}
+          return{id:it.id,n:it.n,wk,amt:b.amt||0,freq,freqLabel,actualTotal,projTotal,totalProj:actualTotal+projTotal};
+        }).sort((a,b)=>b.wk-a.wk);
+        const catWkTotal=itemRows.reduce((s,r)=>s+r.wk,0);
+        const catRangeTotal=itemRows.reduce((s,r)=>s+r.totalProj,0);
+        const pctOfTotal=forecast.wkExp>0?(catWkTotal/forecast.wkExp*100).toFixed(1):"0";
+        return <div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDashCatModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:24,maxWidth:560,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
+            {/* Header */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:12,height:12,borderRadius:"50%",background:cat.c,flexShrink:0}}/>
+                <div>
+                  <div style={{fontSize:17,fontWeight:700,color:P.tx}}>{cat.n}</div>
+                  <div style={{fontSize:10,color:P.txD}}>{pctOfTotal}% of budgeted expenses · {wksInRange} weeks in range</div>
+                </div>
+              </div>
+              <button onClick={()=>setDashCatModal(null)} style={{background:"none",border:"none",color:P.txD,fontSize:18,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
+            </div>
+
+            {/* Summary stats */}
+            <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+              <div style={{flex:"1 1 0",minWidth:90,padding:"10px 12px",background:P.w03,borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.txD,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500,marginBottom:2}}>Budget /wk</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catWkTotal)}</div>
+              </div>
+              <div style={{flex:"1 1 0",minWidth:90,padding:"10px 12px",background:P.w03,borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.txD,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500,marginBottom:2}}>Projected Total</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catRangeTotal)}</div>
+              </div>
+              <div style={{flex:"1 1 0",minWidth:90,padding:"10px 12px",background:P.w03,borderRadius:12,textAlign:"center"}}>
+                <div style={{fontSize:9,color:P.txD,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500,marginBottom:2}}>Remaining Wks</div>
+                <div style={{fontSize:16,fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{wksRem}</div>
+              </div>
+            </div>
+
+            {/* Weekly forecast sparkline */}
+            {wksInRange>1&&(()=>{
+              const weeklyTotals=Array.from({length:wksInRange},(_,idx)=>{
+                const wi=dashStart+idx;
+                return(cat.items||[]).reduce((s,it)=>{
+                  const actual=comp[wi]?((catData[it.id]&&catData[it.id][wi])||0):0;
+                  const proj=(!comp[wi]&&wi>forecast.lastActual)?((forecast.projCat[it.id]&&forecast.projCat[it.id][wi])||0):0;
+                  return s+actual+proj;
+                },0);
+              });
+              const sparkMax2=Math.max(...weeklyTotals,1);
+              return <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:6}}>Weekly Forecast</div>
+                <div style={{background:P.w02,borderRadius:10,padding:"10px 8px",border:"1px solid "+P.bd}}>
+                  <svg viewBox={"0 0 "+wksInRange*10+" 40"} style={{width:"100%",height:50,display:"block"}}>
+                    <polyline fill="none" stroke={cat.c} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
+                      points={weeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax2*36)).join(" ")}/>
+                    <polyline fill={cat.c} fillOpacity="0.1" strokeWidth="0"
+                      points={"0,40 "+weeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax2*36)).join(" ")+" "+(wksInRange-1)*10+",40"}/>
+                  </svg>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
+                    <span style={{fontSize:7,color:P.txM}}>{fd(new Date(W[dashStart].getTime()-6*864e5))}</span>
+                    <span style={{fontSize:7,color:P.txM}}>{fd(W[dashEnd])}</span>
+                  </div>
+                </div>
+              </div>;
+            })()}
+
+            {/* Item breakdown table */}
+            {itemRows.length>0&&<div>
+              <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:8}}>Item Breakdown</div>
+              <div style={{borderRadius:10,border:"1px solid "+P.bd,overflow:"hidden"}}>
+                <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 12px",background:P.w03,borderBottom:"1px solid "+P.bd,fontSize:9,fontWeight:600,color:P.txD,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                  <span style={{flex:1}}>Item</span>
+                  <span style={{width:60,textAlign:"right"}}>Budget</span>
+                  <span style={{width:52,textAlign:"right"}}>/wk</span>
+                  <span style={{width:65,textAlign:"right"}}>Projected</span>
+                  <span style={{width:38,textAlign:"right"}}>Share</span>
+                </div>
+                {itemRows.map((r,idx)=>{
+                  const pct=catWkTotal>0?(r.wk/catWkTotal*100).toFixed(0):"0";
+                  return <div key={r.id} style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",
+                    borderBottom:idx<itemRows.length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{color:P.tx,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.n}</div>
+                      <div style={{fontSize:8,color:P.txM,marginTop:1}}>{r.freqLabel}{r.amt>0?" · "+fm(r.amt)+" "+r.freq:""}</div>
+                    </div>
+                    <span style={{width:60,textAlign:"right",color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{r.amt>0?fm(r.amt):"—"}</span>
+                    <span style={{width:52,textAlign:"right",fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(r.wk)}</span>
+                    <span style={{width:65,textAlign:"right",color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",fontSize:9}}>{fm(r.totalProj)}</span>
+                    <span style={{width:38,textAlign:"right",color:P.txM}}>{pct}%</span>
+                  </div>;
+                })}
+                <div style={{display:"flex",alignItems:"center",gap:4,padding:"8px 12px",background:P.w03,borderTop:"1px solid "+P.bd,fontSize:10,fontWeight:600}}>
+                  <span style={{flex:1,color:P.tx}}>Total</span>
+                  <span style={{width:60}}/>
+                  <span style={{width:52,textAlign:"right",color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catWkTotal)}</span>
+                  <span style={{width:65,textAlign:"right",color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(catRangeTotal)}</span>
+                  <span style={{width:38,textAlign:"right",color:P.txM}}>100%</span>
+                </div>
+              </div>
+            </div>}
+
+            {/* Relative spend mini bars */}
+            {itemRows.filter(r=>r.wk>0).length>1&&<div style={{marginTop:14}}>
+              <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:6}}>Relative Spend</div>
+              {itemRows.filter(r=>r.wk>0).map(r=>{
+                const barPct=catWkTotal>0?r.wk/catWkTotal*100:0;
+                return <div key={r.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                  <span style={{fontSize:9,color:P.txD,width:90,flexShrink:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.n}</span>
+                  <div style={{flex:1,height:14,background:P.w04,borderRadius:4,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:Math.max(barPct,1)+"%",background:cat.c,borderRadius:4,opacity:0.8}}/>
+                  </div>
+                  <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right",flexShrink:0}}>{barPct.toFixed(0)}%</span>
+                </div>;
+              })}
+            </div>}
+
+            <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}>
+              <button onClick={()=>setDashCatModal(null)} style={{padding:"8px 20px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44,fontWeight:500}}>Close</button>
             </div>
           </div>
         </div>;
