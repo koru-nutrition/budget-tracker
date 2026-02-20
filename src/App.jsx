@@ -185,6 +185,12 @@ export default function App({ initialData, onDataChange, theme }){
   const[confetti,setConfetti]=useState(false);
   const[particles,setParts]=useState([]);
 
+  // ─── Responsive width tracking ───
+  const[windowWidth,setWindowWidth]=useState(typeof window!=="undefined"?window.innerWidth:800);
+  useEffect(()=>{const onResize=()=>setWindowWidth(window.innerWidth);window.addEventListener("resize",onResize);return()=>window.removeEventListener("resize",onResize)},[]);
+  const isWide=windowWidth>=1200;
+  const isXWide=windowWidth>=1600;
+
   // ─── Persistence ───
   // ─── Load from Firebase (via props) ───
   useEffect(()=>{
@@ -686,7 +692,7 @@ export default function App({ initialData, onDataChange, theme }){
         </div>}
       </div>
 
-      <div style={{padding:tab==="cash"?"14px 20px":"14px 20px",maxWidth:tab==="cash"?1400:800,margin:"0 auto"}}>
+      <div style={{padding:"14px 20px",maxWidth:tab==="cash"?1400:isXWide?1400:isWide?1100:800,margin:"0 auto"}}>
 
         {/* ═══ START WEEK SETUP (shown when no startWeek is set) ═══ */}
         {startWeek==null&&!startSetupOpen&&(()=>{
@@ -765,7 +771,7 @@ export default function App({ initialData, onDataChange, theme }){
           const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
           const isCurrentWeek=wi===(curWi>=0?curWi:0);
           const isPreStart=wi<startWeek;
-          if(isPreStart) return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
+          if(isPreStart) return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:isWide?900:500,margin:"0 auto"}}>
             <div style={{textAlign:"center",paddingTop:4}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
                 <button onClick={()=>setWeekOffset(o=>o-1)} disabled={wi<=0}
@@ -852,7 +858,7 @@ export default function App({ initialData, onDataChange, theme }){
             });
             setTwAddIncCat("");setTwAddIncAmt("");setTwAddIncOpen(false);
           };
-          return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:500,margin:"0 auto"}}>
+          return <div style={{display:"flex",flexDirection:"column",gap:14,maxWidth:isWide?900:500,margin:"0 auto"}}>
             {/* Week header */}
             <div style={{textAlign:"center",paddingTop:4,marginBottom:6}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:48}}>
@@ -884,8 +890,10 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
             </div>
 
+            {/* Income + Expenses wrapper */}
+            <div style={{display:isWide?"flex":"contents",gap:14,alignItems:"flex-start"}}>
             {/* Income */}
-            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
+            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden",...(isWide?{flex:1,minWidth:0}:{})}}>
               <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{fontSize:15,fontWeight:600,color:P.pos}}>Income</div>
                 <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos}}>{fm(wkInc)}</div>
@@ -948,7 +956,7 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
 
             {/* Expenses */}
-            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden"}}>
+            <div style={{background:P.card,borderRadius:16,border:"1px solid "+P.bd,overflow:"hidden",...(isWide?{flex:1,minWidth:0}:{})}}>
               <div style={{padding:"12px 16px 8px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{fontSize:15,fontWeight:600,color:P.neg}}>Expenses</div>
                 <div style={{fontSize:16,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg}}>{fm(wkExp)}</div>
@@ -1018,6 +1026,7 @@ export default function App({ initialData, onDataChange, theme }){
                 </div>
               </div>}
             </div>
+            </div>{/* end Income+Expenses wrapper */}
 
             {/* Quick summary bar */}
             <div style={{background:P.surfAlt,borderRadius:16,padding:"14px 16px",border:"1px solid "+P.bd}}>
@@ -1067,7 +1076,7 @@ export default function App({ initialData, onDataChange, theme }){
               {l:"Projected Net Cashflow",v:futCf,g:true}
             ];
             return <>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:isXWide?"repeat(4, 1fr)":"1fr 1fr",gap:10}}>
               {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
                 <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4,fontWeight:500}}>{s.l}</div>
                 <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
@@ -1152,7 +1161,7 @@ export default function App({ initialData, onDataChange, theme }){
           {forecast.wkExp>0&&(()=>{
             const bCats=ECAT.map(cat=>({n:cat.n,c:cat.c,wk:cat.items.reduce((s,it)=>{const b=budgets[it.id];return s+(b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0)},0)})).filter(c=>c.wk>0).sort((a,b)=>b.wk-a.wk);
             return <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
+            <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180,maxWidth:isWide?320:undefined}}>
               <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Budgeted Expenses</div>
               <div style={{position:"relative"}}>
               <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
@@ -1269,7 +1278,7 @@ export default function App({ initialData, onDataChange, theme }){
                 {l:"Net Cashflow",v:cf,g:true}
               ];
               return <>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{display:"grid",gridTemplateColumns:isXWide?"repeat(4, 1fr)":"1fr 1fr",gap:10}}>
                 {stats.map(s=><div key={s.l} style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
                   <div style={{fontSize:11,color:P.txD,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3,fontWeight:500}}>{s.l}</div>
                   <div style={{fontSize:22,fontWeight:700,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",
@@ -1315,7 +1324,7 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
             {/* Pie + Bar - By Type with horizontal bars */}
             {insights.grpTotals.length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-              <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180}}>
+              <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,flex:1,minWidth:180,maxWidth:isWide?320:undefined}}>
                 <div style={{fontSize:15,fontWeight:600,marginBottom:4}}>Spending Split ({insights.nw} wks)</div>
                 <div style={{position:"relative"}}>
                 <svg viewBox="0 0 100 100" style={{width:"100%",display:"block",transform:"rotate(-90deg)"}}>
@@ -1405,6 +1414,8 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
             </div>;
             })()}
+            {/* Top Expense Categories + Income Sources wrapper */}
+            <div style={{display:isWide?"grid":"contents",gridTemplateColumns:isWide?"1fr 1fr":undefined,gap:14,alignItems:"start"}}>
             {/* Top Expense Categories - with rank badges */}
             <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
               <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Top Spending Categories</div>
@@ -1436,6 +1447,7 @@ export default function App({ initialData, onDataChange, theme }){
                 </div>;
               })}
             </div>}
+            </div>{/* end Top Spending + Income Sources wrapper */}
           </div>}
         </div>}
 
