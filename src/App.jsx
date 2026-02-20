@@ -956,7 +956,7 @@ export default function App({ initialData, onDataChange, theme }){
             const items=cat.items.map(it=>{
               const actual=catData[it.id]&&catData[it.id][wi];
               const bud=budgetForWeek(budgets[it.id],wi);
-              return{id:it.id,n:it.n,actual,bud,display:actual!=null?actual:bud||null};
+              return{id:it.id,n:it.n,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
             }).filter(x=>x.display!=null&&x.display!==0);
             return{n:cat.n,c:cat.c,items};
           }).filter(g=>g.items.length>0);
@@ -964,7 +964,7 @@ export default function App({ initialData, onDataChange, theme }){
           const incRows=INC.map(c=>{
             const actual=catData[c.id]&&catData[c.id][wi];
             const bud=budgetForWeek(budgets[c.id],wi);
-            return{id:c.id,n:c.n,actual,bud,display:actual!=null?actual:bud||null};
+            return{id:c.id,n:c.n,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
           }).filter(x=>x.display!=null&&x.display!==0);
           // Add/edit expense handler
           const addExpense=()=>{
@@ -1044,27 +1044,13 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
               {incRows.length>0?incRows.map(inc=>
                 <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL,minHeight:44,
-                  cursor:isComp?"pointer":"default"}} onClick={()=>{if(isComp)onCatCell(inc.id,wi)}}>
+                  cursor:"pointer"}} onClick={()=>onCatCell(inc.id,wi)}>
                   <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(inc.bud)}</span>}
-                    {isComp?
-                      <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,cursor:"pointer",
-                        borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
-                    :twEditId===inc.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <span style={{fontSize:10,color:P.txM}}>$</span>
-                      <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
-                        onKeyDown={e=>{if(e.key==="Enter")updateExpense(inc.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
-                        style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
-                      <button onClick={()=>updateExpense(inc.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
-                      {inc.bud>0&&inc.actual!=null&&<button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[inc.id])return prev;n[inc.id]=[...n[inc.id]];n[inc.id][wi]=null;return n});setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Clear</button>}
-                      <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
-                    </div>:<>
-                      <span onClick={()=>{setTwEditId(inc.id);setTwEditAmt(String(inc.display||0))}}
-                        style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,opacity:inc.actual!=null?1:0.5,
-                          cursor:"pointer",borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
-                      {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
-                    </>}
+                    <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,cursor:"pointer",
+                      opacity:inc.actual!=null?1:0.5,borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
+                    {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                   </div>
                 </div>
               ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No income expected</div>}
@@ -1112,29 +1098,14 @@ export default function App({ initialData, onDataChange, theme }){
                     <span style={{fontSize:10,fontWeight:600,color:P.txD}}>{grp.n}</span>
                   </div>
                   {grp.items.map(it=>
-                    <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL,minHeight:44}}>
+                    <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL,minHeight:44,
+                      cursor:"pointer"}} onClick={()=>onCatCell(it.id,wi)}>
                       <span style={{fontSize:12,color:P.tx}}>{it.n}</span>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
                         {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(it.bud)}</span>}
-                        {isComp?
-                          <span onClick={()=>onCatCell(it.id,wi)}
-                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,cursor:"pointer",
-                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
-                        :twEditId===it.id?<div style={{display:"flex",gap:4,alignItems:"center"}}>
-                          <span style={{fontSize:10,color:P.txM}}>$</span>
-                          <input type="number" step="0.01" value={twEditAmt} onChange={e=>setTwEditAmt(e.target.value)} autoFocus
-                            onKeyDown={e=>{if(e.key==="Enter")updateExpense(it.id,twEditAmt);if(e.key==="Escape"){setTwEditId(null);setTwEditAmt("")}}}
-                            style={{width:70,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:36}}/>
-                          <button onClick={()=>updateExpense(it.id,twEditAmt)} style={{fontSize:9,padding:"6px 10px",border:"none",borderRadius:6,background:P.acL,color:P.ac,cursor:"pointer",fontWeight:600,minHeight:36}}>Save</button>
-                          {it.bud>0&&it.actual!=null&&<button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[it.id])return prev;n[it.id]=[...n[it.id]];n[it.id][wi]=null;return n});setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Clear</button>}
-                          <button onClick={()=>{setTwEditId(null);setTwEditAmt("")}} style={{fontSize:9,padding:"6px 8px",border:"1px solid "+P.bd,borderRadius:6,background:P.w04,color:P.txD,cursor:"pointer",minHeight:36}}>Cancel</button>
-                        </div>:<>
-                          <span onClick={()=>{setTwEditId(it.id);setTwEditAmt(String(it.display||0))}}
-                            style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,opacity:it.actual!=null?1:0.5,
-                              cursor:"pointer",
-                              borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
-                          {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
-                        </>}
+                        <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,cursor:"pointer",
+                          opacity:it.actual!=null?1:0.5,borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
+                        {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
                       </div>
                     </div>
                   )}
