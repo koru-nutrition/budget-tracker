@@ -1097,7 +1097,7 @@ export default function App({ initialData, onDataChange, theme }){
               if(vals.length===0)return null;
               const minV=Math.min(...vals),maxV=Math.max(...vals);
               const range=maxV-minV||1;
-              const svgW=600,svgH=220,padX=0,padY=12;
+              const svgW=600,svgH=160,padX=0,padY=12;
               const getX=i=>padX+i*(svgW-2*padX)/(count-1||1);
               const getY=v=>v!=null?padY+(1-(v-minV)/range)*(svgH-2*padY):null;
               // Find last actual index for splitting line segments
@@ -1142,8 +1142,8 @@ export default function App({ initialData, onDataChange, theme }){
               </div>;
             })()}
             <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-              <span style={{fontSize:8,color:P.txM}}>Oct 25</span>
-              <span style={{fontSize:8,color:P.txM}}>May 26</span>
+              <span style={{fontSize:8,color:P.txM}}>{W[dashStart].toLocaleString("en-NZ",{month:"short"})+" "+String(W[dashStart].getFullYear()).slice(2)}</span>
+              <span style={{fontSize:8,color:P.txM}}>{W[dashEnd].toLocaleString("en-NZ",{month:"short"})+" "+String(W[dashEnd].getFullYear()).slice(2)}</span>
             </div>
             <div style={{display:"flex",gap:12,marginTop:8,fontSize:9,color:P.txD}}>
               <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.pos} strokeWidth="2" opacity="0.9"/></svg>Actual</span>
@@ -1223,7 +1223,7 @@ export default function App({ initialData, onDataChange, theme }){
             {(()=>{const wksRem=dashEnd-Math.max(dashStart,forecast.lastActual+1)+1;
               const incItems=INC.map(c=>{const b=budgets[c.id];const wk=b&&b.amt?freqToWeekly(b.amt,b.freq||"w"):0;return{n:c.n,wk,total:wk*Math.max(wksRem,0)}}).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
               return incItems.map(inc=>
-                <div key={inc.n} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"8px 0"}}>
+                <div key={inc.n} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,padding:"4px 0"}}>
                   <div style={{width:4,height:24,borderRadius:2,background:P.ac,flexShrink:0}}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:12,color:P.tx,fontWeight:500}}>{inc.n}</div>
@@ -1374,13 +1374,17 @@ export default function App({ initialData, onDataChange, theme }){
                     <span style={{fontSize:9,color:P.txM,width:28,textAlign:"right"}}>{(g.total/insights.grpGrand*100).toFixed(0)}%</span>
                   </div>;
                 })}
+                <div style={{borderTop:"1px solid "+P.bdL,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between"}}>
+                  <span style={{fontSize:10,fontWeight:600,color:P.neg}}>Total</span>
+                  <span style={{fontSize:10,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(insights.grpGrand/insights.nw)}/wk</span>
+                </div>
               </div>
             </div>;})()}
             {insights.compWks.length>1&&(()=>{
               const nets=insights.compWks.map(wi=>({wi,net:wT[wi].net}));
               const maxAbs=Math.max(...nets.map(n=>Math.abs(n.net)),1);
               return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Weekly Surplus / Deficit</div>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:10}}>Weekly Cashflow</div>
               <div style={{position:"relative"}}>
               <div style={{display:"flex",gap:3,height:120}}>
                 {nets.map((n,i)=>{
