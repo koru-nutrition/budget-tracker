@@ -1631,7 +1631,7 @@ export default function App({ initialData, onDataChange, theme }){
       </div>
 
       {/* ═══ CATEGORY EDITOR MODAL ═══ */}
-      {catEditorOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
+      {catEditorOpen&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCatEditorOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:600,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Edit Categories</div>
@@ -1687,7 +1687,7 @@ export default function App({ initialData, onDataChange, theme }){
       </div>}
 
       {/* ═══ CELL DETAIL MODAL ═══ */}
-      {cellDetail!=null&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
+      {cellDetail!=null&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setCellDetail(null)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:550,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div>
@@ -1742,7 +1742,7 @@ export default function App({ initialData, onDataChange, theme }){
       </div>}
 
       {/* ═══ IMPORT MODAL ═══ */}
-      {impOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+      {impOpen&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
         <div style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
 
           {impStep==="upload"&&<div>
@@ -1821,7 +1821,7 @@ export default function App({ initialData, onDataChange, theme }){
         </div>
       </div>}
       {/* ═══ SETTINGS MODAL (start week / opening balance) ═══ */}
-      {settingsOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
+      {settingsOpen&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSettingsOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:460,width:"92%",maxHeight:"80vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:16,fontWeight:700}}>Settings</div>
@@ -1866,7 +1866,7 @@ export default function App({ initialData, onDataChange, theme }){
       </div>}
 
       {/* ═══ BUDGET EDITOR MODAL ═══ */}
-      {budgetOpen&&<div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
+      {budgetOpen&&<div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setBudgetOpen(false)}>
         <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:620,width:"95%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
           <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Set Budgets</div>
           <div style={{fontSize:11,color:P.txD,marginBottom:14}}>Configure expected amounts. Monthly bills: pick the day they hit. Fortnightly: toggle offset to align with your pay cycle.</div>
@@ -1956,7 +1956,7 @@ export default function App({ initialData, onDataChange, theme }){
         const sparkMax=Math.max(...catWeeklyTotals,1);
         // % of overall spending
         const pctOfTotal=insights.grpGrand>0?(catTotal/insights.grpGrand*100).toFixed(1):0;
-        return <div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setInsCatModal(null)}>
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setInsCatModal(null)}>
           <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:24,maxWidth:560,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
             {/* Header */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
@@ -2084,7 +2084,7 @@ export default function App({ initialData, onDataChange, theme }){
         const catWkTotal=itemRows.reduce((s,r)=>s+r.wk,0);
         const catRangeTotal=itemRows.reduce((s,r)=>s+r.totalProj,0);
         const pctOfTotal=forecast.wkExp>0?(catWkTotal/forecast.wkExp*100).toFixed(1):"0";
-        return <div style={{position:"fixed",inset:0,background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDashCatModal(null)}>
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDashCatModal(null)}>
           <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:24,maxWidth:560,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd,boxShadow:"none"}}>
             {/* Header */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>

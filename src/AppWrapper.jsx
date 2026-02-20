@@ -416,7 +416,7 @@ export default function AppWrapper() {
 
   // ─── Settings modal ───
   const settingsModal = settingsOpen && (
-    <div style={{ position: "fixed", inset: 0, background: P.overlayBg, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+    <div style={{ position: "fixed", inset: 0, minHeight: "100dvh", background: P.overlayBg, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       onClick={() => { setSettingsOpen(false); setLeaveConfirm(false); }}>
       <div onClick={e => e.stopPropagation()} style={{ background: P.card, borderRadius: 16, padding: 24, maxWidth: 420, width: "92%",
         maxHeight: "85vh", overflow: "auto", border: "1px solid " + P.bd }}>
