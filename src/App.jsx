@@ -1986,11 +1986,11 @@ export default function App({ initialData, onDataChange, theme }){
             {compWks.length>1&&<div style={{marginBottom:16}}>
               <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:6}}>Weekly Trend</div>
               <div style={{background:P.w02,borderRadius:10,padding:"10px 8px",border:"1px solid "+P.bd}}>
-                <svg viewBox={"0 0 "+compWks.length*10+" 40"} style={{width:"100%",height:50,display:"block"}}>
-                  <polyline fill="none" stroke={cat.c} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
-                    points={catWeeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax*36)).join(" ")}/>
+                <svg viewBox="0 0 200 40" preserveAspectRatio="none" style={{width:"100%",height:50,display:"block"}}>
+                  <polyline fill="none" stroke={cat.c} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
+                    points={catWeeklyTotals.map((v,i)=>i*200/(compWks.length-1)+","+(40-v/sparkMax*36)).join(" ")}/>
                   <polyline fill={cat.c} fillOpacity="0.1" strokeWidth="0"
-                    points={"0,40 "+catWeeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax*36)).join(" ")+" "+(compWks.length-1)*10+",40"}/>
+                    points={"0,40 "+catWeeklyTotals.map((v,i)=>i*200/(compWks.length-1)+","+(40-v/sparkMax*36)).join(" ")+" 200,40"}/>
                 </svg>
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
                   <span style={{fontSize:7,color:P.txM}}>{fd(new Date(W[compWks[0]].getTime()-6*864e5))}</span>
@@ -2124,11 +2124,11 @@ export default function App({ initialData, onDataChange, theme }){
               return <div style={{marginBottom:16}}>
                 <div style={{fontSize:11,fontWeight:600,color:P.tx,marginBottom:6}}>Weekly Forecast</div>
                 <div style={{background:P.w02,borderRadius:10,padding:"10px 8px",border:"1px solid "+P.bd}}>
-                  <svg viewBox={"0 0 "+wksInRange*10+" 40"} style={{width:"100%",height:50,display:"block"}}>
-                    <polyline fill="none" stroke={cat.c} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
-                      points={weeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax2*36)).join(" ")}/>
+                  <svg viewBox="0 0 200 40" preserveAspectRatio="none" style={{width:"100%",height:50,display:"block"}}>
+                    <polyline fill="none" stroke={cat.c} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"
+                      points={weeklyTotals.map((v,i)=>i*200/(wksInRange-1)+","+(40-v/sparkMax2*36)).join(" ")}/>
                     <polyline fill={cat.c} fillOpacity="0.1" strokeWidth="0"
-                      points={"0,40 "+weeklyTotals.map((v,i)=>i*10+","+(40-v/sparkMax2*36)).join(" ")+" "+(wksInRange-1)*10+",40"}/>
+                      points={"0,40 "+weeklyTotals.map((v,i)=>i*200/(wksInRange-1)+","+(40-v/sparkMax2*36)).join(" ")+" 200,40"}/>
                   </svg>
                   <div style={{display:"flex",justifyContent:"space-between",marginTop:2}}>
                     <span style={{fontSize:7,color:P.txM}}>{fd(new Date(W[dashStart].getTime()-6*864e5))}</span>
