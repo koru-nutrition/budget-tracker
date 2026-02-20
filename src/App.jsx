@@ -860,7 +860,7 @@ export default function App({ initialData, onDataChange, theme }){
                   style={{width:44,height:44,borderRadius:16,border:"1px solid "+P.bd,background:wi<=0?"transparent":P.w04,color:wi<=0?P.txM:P.tx,fontSize:22,fontWeight:700,
                     cursor:wi<=0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1,opacity:wi<=0?0.3:1,
                     flexShrink:0,alignSelf:"center",transition:"all 0.2s ease"}}>&#8249;</button>
-                <div style={{flex:1,minWidth:0}}>
+                <div style={{flex:1,minWidth:0,paddingBottom:20}}>
                   <div style={{height:22,marginBottom:4,display:"flex",alignItems:"center",justifyContent:"center"}}>{isComp&&<span style={{fontSize:10,color:P.pos,background:P.posL,border:"none",padding:"3px 12px",borderRadius:10,fontWeight:600}}>Completed</span>}</div>
                   <div style={{fontSize:20,fontWeight:700,color:P.tx}}>{isCurrentWeek?"This Week":"Week of "+fd(mon)}</div>
                   <div style={{fontSize:12,color:P.txD,marginTop:2}}>{fd(mon)} – {fd(sun)}{!isCurrentWeek&&<span onClick={()=>setWeekOffset(0)} style={{color:P.ac,cursor:"pointer",fontWeight:600,marginLeft:8}}>↩ Today</span>}</div>
