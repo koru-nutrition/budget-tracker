@@ -2011,8 +2011,8 @@ export default function App({ initialData, onDataChange, theme }){
                 const isFirst=idx===0&&activeDebts.length>1;
                 return <div key={di.id} onClick={()=>setDebtView(di.id)}
                   style={{background:P.card,borderRadius:14,padding:16,border:isFirst?"2px solid "+P.ac:"1px solid "+P.bd,cursor:"pointer",transition:"all 0.15s ease",position:"relative",overflow:"hidden"}}>
-                  {isFirst&&<div style={{position:"absolute",top:8,right:10,fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:".04em"}}>Focus Here</div>}
-                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                  {isFirst&&<div style={{position:"absolute",top:8,right:10,fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"4px 8px",borderRadius:10,textTransform:"uppercase",letterSpacing:".04em"}}>Focus Here</div>}
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:10,marginTop:isFirst?14:0}}>
                     <div style={{fontSize:24}}>{dt.icon}</div>
                     <div style={{flex:1}}>
                       <div style={{fontSize:13,fontWeight:700,color:P.tx}}>{di.name}</div>
