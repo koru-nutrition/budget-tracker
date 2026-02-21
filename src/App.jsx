@@ -827,13 +827,18 @@ export default function App({ initialData, onDataChange, theme }){
     }
     return 0;// fallback
   },[dayInWeek]);
+  // Period divisor for interest frequency: weekly=52, fortnightly=26, monthly=12
+  const intPeriods=f=>f==="w"?52:f==="f"?26:12;
   // Check if interest should be charged in a given week
-  const interestDueInWeek=useCallback((debt,sun,prevMo)=>{
-    const rate=(debt.interestRate||0)/12/100;
+  const interestDueInWeek=useCallback((debt,sun,prevMo,wi)=>{
+    const freq=debt.interestFreq||"m";
+    const rate=(debt.interestRate||0)/intPeriods(freq)/100;
     if(rate<=0)return false;
+    if(freq==="w")return true;
+    if(freq==="f")return(wi%2===0);
+    // Monthly: use interestDay if set, otherwise month boundary
     const day=debt.interestDay||null;
     if(day)return dayInWeek(day,sun);
-    // Fallback: month boundary (backward compat for debts without interestDay)
     return sun.getMonth()!==prevMo;
   },[dayInWeek]);
 
@@ -879,7 +884,7 @@ export default function App({ initialData, onDataChange, theme }){
       let startWi=0;
       for(let i=0;i<W.length;i++){if(balDate<=W[i]){startWi=i;break}if(i===W.length-1)startWi=i}
       let bal=debt.balance;
-      const moRate=(debt.interestRate||0)/12/100;
+      const iFreq=debt.interestFreq||"m";const pRate=(debt.interestRate||0)/intPeriods(iFreq)/100;
       let totInt=0,totPaid=0;
       let prevMo=balDate.getMonth();
       const hist=[];
@@ -892,7 +897,7 @@ export default function App({ initialData, onDataChange, theme }){
         const sun=W[wi];const mon=new Date(sun);mon.setDate(mon.getDate()-6);
         const cm=sun.getMonth();
         // Date-aware interest: use interestDay if set, otherwise month boundary
-        if(bal>0&&interestDueInWeek(debt,sun,prevMo)){const interest=Math.round(bal*moRate*100)/100;bal+=interest;totInt+=interest}
+        if(bal>0&&interestDueInWeek(debt,sun,prevMo,wi)){const interest=Math.round(bal*pRate*100)/100;bal+=interest;totInt+=interest}
         prevMo=cm;
         while(mi<manual.length&&manual[mi]._d<=sun){
           const t=manual[mi];
@@ -909,12 +914,15 @@ export default function App({ initialData, onDataChange, theme }){
       bal=Math.round(bal*100)/100;
       const bgt=debt.linkedCatId?budgets[debt.linkedCatId]:null;
       const wkPay=bgt&&bgt.amt?freqToWeekly(bgt.amt,bgt.freq||"w"):0;
+      const periods=intPeriods(iFreq);const periodPay=wkPay*52/periods;
       const moPay=wkPay*52/12;
       let projDate=null,projMo=null;
-      if(bal>0&&moPay>0){
-        if(moRate>0){if(moPay<=bal*moRate)projMo=Infinity;else projMo=Math.ceil(-Math.log(1-moRate*bal/moPay)/Math.log(1+moRate))}
-        else projMo=Math.ceil(bal/moPay);
-        if(projMo!==Infinity){projDate=new Date();projDate.setMonth(projDate.getMonth()+projMo)}
+      if(bal>0&&periodPay>0){
+        let projPeriods;
+        if(pRate>0){if(periodPay<=bal*pRate)projPeriods=Infinity;else projPeriods=Math.ceil(-Math.log(1-pRate*bal/periodPay)/Math.log(1+pRate))}
+        else projPeriods=Math.ceil(bal/periodPay);
+        projMo=projPeriods===Infinity?Infinity:Math.ceil(projPeriods*12/periods);
+        if(projMo!==Infinity){projDate=new Date();if(iFreq==="w")projDate.setDate(projDate.getDate()+projPeriods*7);else if(iFreq==="f")projDate.setDate(projDate.getDate()+projPeriods*14);else projDate.setMonth(projDate.getMonth()+projPeriods)}
       }
       const progress=debt.balance>0?Math.min(100,Math.max(0,(1-Math.max(0,bal)/debt.balance)*100)):(bal<=0?100:0);
       return{...debt,currentBalance:Math.max(0,bal),totalInterest:totInt,totalPaid:totPaid,paymentHistory:hist.slice().reverse(),
@@ -945,7 +953,7 @@ export default function App({ initialData, onDataChange, theme }){
     // Full snowball projection: simulate week by week with date-aware interest & minimums
     const MAX_WK=520;// 10 years
     const bals={};active.forEach(d=>{bals[d.id]=d.currentBalance});
-    const rates={};active.forEach(d=>{rates[d.id]=(d.interestRate||0)/12/100});
+    const rates={};active.forEach(d=>{rates[d.id]=(d.interestRate||0)/intPeriods(d.interestFreq||"m")/100});
     const schedule=[];// {debtId, debtName, payoffWeek, payoffDate}
     const now=new Date();
     let curWi=0;
@@ -960,7 +968,7 @@ export default function App({ initialData, onDataChange, theme }){
       const cm=sun.getMonth();
       // Apply interest using date-aware check (interestDay or fallback to month boundary)
       active.forEach(d=>{
-        if(bals[d.id]>0&&interestDueInWeek(d,sun,prevMos[d.id])){
+        if(bals[d.id]>0&&interestDueInWeek(d,sun,prevMos[d.id],wi)){
           bals[d.id]+=Math.round(bals[d.id]*rates[d.id]*100)/100;
         }
         prevMos[d.id]=cm;
@@ -1071,14 +1079,14 @@ export default function App({ initialData, onDataChange, theme }){
       const balDate=new Date(debt.balanceDate);
       let startWi=0;
       for(let i=0;i<W.length;i++){if(balDate<=W[i]){startWi=i;break}if(i===W.length-1)startWi=i}
-      let bal=debt.balance;const moRate=(debt.interestRate||0)/12/100;let prevMo=balDate.getMonth();
+      let bal=debt.balance;const tFreq=debt.interestFreq||"m";const pRate=(debt.interestRate||0)/intPeriods(tFreq)/100;let prevMo=balDate.getMonth();
       const pts=[];
       const manual=[...(debt.charges||[]).map(c=>({...c,_t:"charge",_d:new Date(c.date)})),...(debt.extraPayments||[]).map(e=>({...e,_t:"extra",_d:new Date(e.date)}))].sort((a,b)=>a._d-b._d);
       let mi=0;
       for(let wi=startWi;wi<=curWi;wi++){
         const sun=W[wi];const cm=sun.getMonth();
         // Date-aware interest for trajectories
-        if(bal>0&&interestDueInWeek(debt,sun,prevMo)){bal+=Math.round(bal*moRate*100)/100}
+        if(bal>0&&interestDueInWeek(debt,sun,prevMo,wi)){bal+=Math.round(bal*pRate*100)/100}
         prevMo=cm;
         while(mi<manual.length&&manual[mi]._d<=sun){const t=manual[mi];if(t._t==="charge")bal+=t.amount;else bal-=t.amount;mi++}
         if(debt.linkedCatId&&catData[debt.linkedCatId]){const pay=catData[debt.linkedCatId][wi];if(pay!=null&&pay>0)bal-=pay}
@@ -1099,14 +1107,14 @@ export default function App({ initialData, onDataChange, theme }){
           const di=debtInfos.find(x=>x.id===d.id);
           sBals[d.id]=d.id===debt.id?bal:(di?di.currentBalance:d.balance);
         });
-        const sRates={};activeDebts.forEach(d=>{sRates[d.id]=(d.interestRate||0)/12/100});
+        const sRates={};activeDebts.forEach(d=>{sRates[d.id]=(d.interestRate||0)/intPeriods(d.interestFreq||"m")/100});
         const sPrevMos={};activeDebts.forEach(d=>{sPrevMos[d.id]=prevMo});
         const totalWk=snowballPlan.totalWeekly;
         for(let wi=curWi+1;wi<curWi+MAX_PROJ;wi++){
           let sun;if(wi<NW)sun=W[wi];else{sun=new Date(W[NW-1]);sun.setDate(sun.getDate()+(wi-NW+1)*7)}
           const cm=sun.getMonth();
           // Date-aware interest in snowball trajectory projection
-          activeDebts.forEach(d=>{if(sBals[d.id]>0&&interestDueInWeek(d,sun,sPrevMos[d.id])){sBals[d.id]+=Math.round(sBals[d.id]*sRates[d.id]*100)/100}sPrevMos[d.id]=cm});
+          activeDebts.forEach(d=>{if(sBals[d.id]>0&&interestDueInWeek(d,sun,sPrevMos[d.id],wi)){sBals[d.id]+=Math.round(sBals[d.id]*sRates[d.id]*100)/100}sPrevMos[d.id]=cm});
           const alive=activeDebts.filter(d=>sBals[d.id]>0).sort((a,b)=>sBals[a.id]-sBals[b.id]);
           let wkRem=totalWk;const wkAlloc={};
           // Date-aware minimum payments in snowball trajectory projection
@@ -1122,7 +1130,7 @@ export default function App({ initialData, onDataChange, theme }){
           let sun;if(wi<NW)sun=W[wi];else{sun=new Date(W[NW-1]);sun.setDate(sun.getDate()+(wi-NW+1)*7)}
           const cm=sun.getMonth();
           // Date-aware interest for individual debt projection
-          if(bal>0&&interestDueInWeek(debt,sun,prevMo)){bal+=Math.round(bal*moRate*100)/100}
+          if(bal>0&&interestDueInWeek(debt,sun,prevMo,wi)){bal+=Math.round(bal*pRate*100)/100}
           prevMo=cm;
           let pay=0;if(wi<NW&&bgt)pay=budgetForWeek(bgt,wi);else pay=indivWkAvg;
           if(pay>0)bal-=pay;bal=Math.round(Math.max(0,bal)*100)/100;
@@ -2736,6 +2744,7 @@ export default function App({ initialData, onDataChange, theme }){
           const[dType,setDType]=useState(existing?.type||"credit_card");
           const[dRate,setDRate]=useState(existing?.interestRate!=null?String(existing.interestRate):"");
           const[dIntDay,setDIntDay]=useState(existing?.interestDay!=null?String(existing.interestDay):"1");
+          const[dIntFreq,setDIntFreq]=useState(existing?.interestFreq||existing?.minPaymentFreq||"m");
           const[dBal,setDBal]=useState(existing?.balance!=null?String(existing.balance):"");
           const[dDate,setDDate]=useState(existing?.balanceDate||new Date().toISOString().slice(0,10));
           const[dMin,setDMin]=useState(existing?.minimumPayment!=null?String(existing.minimumPayment):"");
@@ -2761,7 +2770,8 @@ export default function App({ initialData, onDataChange, theme }){
               id:existing?.id||("d_"+Date.now().toString(36)),
               name:trimName,type:dType,
               interestRate:parseFloat(dRate)||0,
-              interestDay:parseFloat(dRate)>0?(dIntDay==="last"?"last":parseInt(dIntDay)||1):null,
+              interestFreq:parseFloat(dRate)>0?dIntFreq:"m",
+              interestDay:parseFloat(dRate)>0&&dIntFreq==="m"?(dIntDay==="last"?"last":parseInt(dIntDay)||1):null,
               balance:parseFloat(dBal)||0,
               balanceDate:dDate,
               linkedCatId:catId,
@@ -2792,10 +2802,14 @@ export default function App({ initialData, onDataChange, theme }){
                 <select value={dType} onChange={e=>setDType(e.target.value)} style={inputStyle}>
                   {DEBT_TYPES.map(t=><option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
                 </select></div>
-              <div style={{display:"flex",gap:10}}>
-                <div style={{flex:1}}><label style={labelStyle}>Interest Rate (% p.a.)</label>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                <div style={{flex:"1 1 100px"}}><label style={labelStyle}>Interest Rate (% p.a.)</label>
                   <input type="number" step="0.01" min="0" value={dRate} onChange={e=>setDRate(e.target.value)} placeholder="e.g. 22.95" style={inputStyle}/></div>
-                {parseFloat(dRate)>0&&<div style={{flex:1}}><label style={labelStyle}>Interest Charge Day</label>
+                {parseFloat(dRate)>0&&<div style={{flex:"1 1 100px"}}><label style={labelStyle}>Interest Frequency</label>
+                  <select value={dIntFreq} onChange={e=>setDIntFreq(e.target.value)} style={inputStyle}>
+                    <option value="w">Weekly</option><option value="f">Fortnightly</option><option value="m">Monthly</option>
+                  </select></div>}
+                {parseFloat(dRate)>0&&dIntFreq==="m"&&<div style={{flex:"1 1 100px"}}><label style={labelStyle}>Interest Charge Day</label>
                   <select value={dIntDay} onChange={e=>setDIntDay(e.target.value)} style={inputStyle}>
                     {Array.from({length:28},(_,i)=><option key={i+1} value={i+1}>{i+1}{i===0?"st":i===1?"nd":i===2?"rd":"th"} of month</option>)}
                     <option value="last">Last day of month</option>
