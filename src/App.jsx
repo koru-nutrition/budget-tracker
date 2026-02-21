@@ -261,6 +261,7 @@ export default function App({ initialData, onDataChange, theme }){
   const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
   const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// extra snowball amount on top of minimums
   const[snowballSettingsOpen,setSnowballSettingsOpen]=useState(false);
+  const[hoverDebtPt,setHoverDebtPt]=useState(null);// hover index for combined debt payoff chart
   const[sAmt,setSAmt]=useState("");
   const[sFreq,setSFreq]=useState("w");
   const[sDay,setSDay]=useState(1);
@@ -1893,6 +1894,93 @@ export default function App({ initialData, onDataChange, theme }){
                   <div style={{height:"100%",width:Math.max(0,Math.min(100,paidDown/startTotal*100))+"%",background:"linear-gradient(90deg, "+P.pos+", "+P.ac+")",borderRadius:3,transition:"width .5s ease"}}/>
                 </div>
               </div>}
+              {/* Combined Total Debt Payoff Chart */}
+              {(()=>{
+                const trajData=activeDts.map(d=>({id:d.id,name:d.name,type:d.type,color:DEBT_TYPE_COLORS[d.type]||DEBT_TYPE_COLORS.other,traj:debtTrajectories[d.id]})).filter(d=>d.traj&&d.traj.points.length>=2);
+                if(trajData.length===0)return null;
+                // Collect all unique week indices across all debt trajectories
+                const wiSet=new Set();
+                trajData.forEach(d=>d.traj.points.forEach(p=>wiSet.add(p.wi)));
+                const allWis=[...wiSet].sort((a,b)=>a-b);
+                if(allWis.length<2)return null;
+                // Find the boundary between actual and projected
+                let maxActualWi=-1;
+                trajData.forEach(d=>{d.traj.points.forEach(p=>{if(p.isActual&&p.wi>maxActualWi)maxActualWi=p.wi})});
+                // Build combined points
+                const pts=allWis.map(wi=>{
+                  let total=0;
+                  trajData.forEach(d=>{const b=debtAtWi(d.id,wi);if(b!=null)total+=b});
+                  const sun=wi<W.length?W[wi]:new Date(W[W.length-1].getTime()+(wi-W.length+1)*7*864e5);
+                  return{wi,bal:Math.round(total*100)/100,date:new Date(sun),isActual:wi<=maxActualWi};
+                });
+                // Downsample if too many points
+                let dPts=pts;
+                if(pts.length>200){const step=Math.ceil(pts.length/200);const laI=pts.reduce((a,p,i)=>p.isActual?i:a,-1);
+                  dPts=pts.filter((_,i)=>i===0||i===pts.length-1||i===laI||i===laI+1||i%step===0)}
+                const vals=dPts.map(p=>p.bal);const maxV=Math.max(...vals);const minV=0;const range=maxV-minV||1;
+                const svgW=600,svgH=180,padX=0,padY=14;
+                const getX=i=>padX+i*(svgW-2*padX)/(dPts.length-1||1);
+                const getY=v=>padY+(1-(v-minV)/range)*(svgH-2*padY);
+                const lastActIdx=dPts.reduce((a,p,i)=>p.isActual?i:a,-1);
+                const actPts=dPts.slice(0,lastActIdx+1);const fcPts=lastActIdx>=0?dPts.slice(lastActIdx):dPts;
+                const bp=sub=>sub.map((p,i)=>{const idx=dPts.indexOf(p);return(i===0?"M":"L")+getX(idx).toFixed(1)+","+getY(p.bal).toFixed(1)}).join(" ");
+                const actPath=actPts.length>1?bp(actPts):"";const fcPath=fcPts.length>1?bp(fcPts):"";
+                const zeroY=getY(0);
+                const areaPath=dPts.length>1?bp(dPts)+"L"+getX(dPts.length-1).toFixed(1)+","+svgH+"L"+getX(0).toFixed(1)+","+svgH+"Z":"";
+                // Per-debt thin lines (only if <= 6 debts to avoid clutter)
+                const debtLines=trajData.length<=6?trajData.map(d=>{
+                  const dPtsForDebt=dPts.map(cp=>{const b=debtAtWi(d.id,cp.wi);return{bal:b!=null?b:0}});
+                  const path=dPtsForDebt.map((p,i)=>(i===0?"M":"L")+getX(i).toFixed(1)+","+getY(p.bal).toFixed(1)).join(" ");
+                  return{id:d.id,name:d.name,color:d.color,path};
+                }):[];
+                // Debt-free point
+                const debtFreeDate=snowballPlan.debtFreeDate;
+                const lastPt=dPts[dPts.length-1];
+                const debtFreeIdx=lastPt&&lastPt.bal<=0?dPts.length-1:null;
+                return <div style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10,flexWrap:"wrap",gap:4}}>
+                    <div style={{fontSize:12,fontWeight:700}}>Total Debt Payoff</div>
+                    {debtFreeDate&&<div style={{fontSize:10,fontWeight:600,color:P.pos}}>Debt-free: {debtFreeDate.toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"})}</div>}
+                  </div>
+                  <div style={{position:"relative"}}>
+                    <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}}
+                      onMouseLeave={()=>setHoverDebtPt(null)}
+                      onMouseMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)/rect.width*svgW;const idx=Math.round((x-padX)/((svgW-2*padX)/(dPts.length-1||1)));setHoverDebtPt(Math.max(0,Math.min(dPts.length-1,idx)))}}>
+                      <defs><linearGradient id="combDebtGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.neg} stopOpacity="0.15"/><stop offset="100%" stopColor={P.neg} stopOpacity="0.02"/></linearGradient></defs>
+                      {areaPath&&<path d={areaPath} fill="url(#combDebtGrad)"/>}
+                      <line x1={padX} y1={zeroY} x2={svgW-padX} y2={zeroY} stroke={P.pos} strokeWidth="0.5" strokeDasharray="4 3" opacity="0.4"/>
+                      {debtLines.map(dl=><path key={dl.id} d={dl.path} fill="none" stroke={dl.color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>)}
+                      {actPath&&<path d={actPath} fill="none" stroke={P.neg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>}
+                      {fcPath&&<path d={fcPath} fill="none" stroke={P.neg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" opacity="0.45"/>}
+                      {debtFreeIdx!=null&&<circle cx={getX(debtFreeIdx)} cy={getY(0)} r="5" fill={P.pos} stroke="#fff" strokeWidth="1.5"/>}
+                      {hoverDebtPt!=null&&hoverDebtPt>=0&&hoverDebtPt<dPts.length&&<circle cx={getX(hoverDebtPt)} cy={getY(dPts[hoverDebtPt].bal)} r="5" fill={P.neg} opacity="0.9" style={{transition:"cx .1s,cy .1s"}}/>}
+                    </svg>
+                    {hoverDebtPt!=null&&hoverDebtPt>=0&&hoverDebtPt<dPts.length&&(()=>{const p=dPts[hoverDebtPt];const xPct=getX(hoverDebtPt)/svgW*100;
+                      // Per-debt breakdown for tooltip
+                      const breakdown=trajData.map(d=>{const b=debtAtWi(d.id,p.wi);return{name:d.name,bal:b!=null?b:0,color:d.color}}).filter(d=>d.bal>0).sort((a,b)=>b.bal-a.bal);
+                      return <div style={{position:"absolute",top:-8,left:xPct+"%",transform:"translateX(-50%)",
+                        background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"6px 12px",borderRadius:8,fontSize:10,fontWeight:600,
+                        fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5,maxWidth:200}}>
+                        <div style={{marginBottom:breakdown.length>0?4:0}}>{fd(new Date(p.date.getTime()-6*864e5))}: {fm(p.bal)}{!p.isActual?" (projected)":""}</div>
+                        {breakdown.map(d=><div key={d.name} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:9,fontWeight:500,color:P.txD}}>
+                          <span style={{display:"inline-flex",alignItems:"center",gap:3}}><span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:d.color,flexShrink:0}}/>{d.name}</span>
+                          <span style={{color:P.tx}}>{fm(d.bal)}</span>
+                        </div>)}
+                      </div>;
+                    })()}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                    <span style={{fontSize:8,color:P.txM}}>{dPts[0].date.toLocaleString("en-NZ",{month:"short"})+" "+String(dPts[0].date.getFullYear()).slice(2)}</span>
+                    <span style={{fontSize:8,color:P.txM}}>{dPts[dPts.length-1].date.toLocaleString("en-NZ",{month:"short"})+" "+String(dPts[dPts.length-1].date.getFullYear()).slice(2)}</span>
+                  </div>
+                  <div style={{display:"flex",gap:12,marginTop:6,fontSize:9,color:P.txD,flexWrap:"wrap"}}>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.neg} strokeWidth="2.5" opacity="0.85"/></svg>Actual</span>
+                    {fcPts.length>1&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.neg} strokeWidth="2" strokeDasharray="4 3" opacity="0.45"/></svg>Projected</span>}
+                    {debtFreeIdx!=null&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={P.pos} stroke="#fff" strokeWidth="1"/></svg>Debt-free</span>}
+                    {debtLines.map(dl=><span key={dl.id} style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={dl.color} strokeWidth="1.2" opacity="0.6"/></svg>{trajData.find(d=>d.id===dl.id)?.name}</span>)}
+                  </div>
+                </div>;
+              })()}
               {activeDts.map(d=>{
                 const sb=debtAtWi(d.id,dashStart);
                 const eb=debtAtWi(d.id,dashEnd);
