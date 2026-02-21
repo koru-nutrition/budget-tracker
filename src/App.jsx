@@ -264,12 +264,38 @@ export default function App({ initialData, onDataChange, theme }){
   const[sAmt,setSAmt]=useState("");
   const[sFreq,setSFreq]=useState("w");
   const[sDay,setSDay]=useState(1);
+  // Debt form state (lifted to App level to prevent re-render state loss)
+  const[dName,setDName]=useState("");
+  const[dType,setDType]=useState("credit_card");
+  const[dRate,setDRate]=useState("");
+  const[dIntDay,setDIntDay]=useState("1");
+  const[dIntFreq,setDIntFreq]=useState("m");
+  const[dBal,setDBal]=useState("");
+  const[dDate,setDDate]=useState(()=>new Date().toISOString().slice(0,10));
+  const[dMin,setDMin]=useState("");
+  const[dMinFreq,setDMinFreq]=useState("m");
+  const[dMinDay,setDMinDay]=useState("1");
   const openSnowballSettings=useCallback(()=>{
     setSAmt(debtBudget.amt?String(debtBudget.amt):"");
     setSFreq(debtBudget.freq||"w");
     setSDay(debtBudget.day||1);
     setSnowballSettingsOpen(true);
   },[debtBudget]);
+  // Initialize debt form state when modal opens
+  useEffect(()=>{
+    if(debtModal==null)return;
+    const ex=debtModal!=="add"?debtModal:null;
+    setDName(ex?.name||"");
+    setDType(ex?.type||"credit_card");
+    setDRate(ex?.interestRate!=null?String(ex.interestRate):"");
+    setDIntDay(ex?.interestDay!=null?String(ex.interestDay):"1");
+    setDIntFreq(ex?.interestFreq||ex?.minPaymentFreq||"m");
+    setDBal(ex?.balance!=null?String(ex.balance):"");
+    setDDate(ex?.balanceDate||new Date().toISOString().slice(0,10));
+    setDMin(ex?.minimumPayment!=null?String(ex.minimumPayment):"");
+    setDMinFreq(ex?.minPaymentFreq||"m");
+    setDMinDay(ex?.minPaymentDay!=null?String(ex.minPaymentDay):"1");
+  },[debtModal]);
   // Separate debt-linked categories from regular expenses at ITEM level
   const debtLinkedIds=useMemo(()=>new Set(debts.map(d=>d.linkedCatId).filter(Boolean)),[debts]);
   // Regular: clone each group with debt-linked items removed, drop empty groups
@@ -2755,18 +2781,7 @@ export default function App({ initialData, onDataChange, theme }){
       {debtModal!=null&&(()=>{
         const isEdit=debtModal!=="add";
         const existing=isEdit?debtModal:null;
-        const ModalInner=()=>{
-          const[dName,setDName]=useState(existing?.name||"");
-          const[dType,setDType]=useState(existing?.type||"credit_card");
-          const[dRate,setDRate]=useState(existing?.interestRate!=null?String(existing.interestRate):"");
-          const[dIntDay,setDIntDay]=useState(existing?.interestDay!=null?String(existing.interestDay):"1");
-          const[dIntFreq,setDIntFreq]=useState(existing?.interestFreq||existing?.minPaymentFreq||"m");
-          const[dBal,setDBal]=useState(existing?.balance!=null?String(existing.balance):"");
-          const[dDate,setDDate]=useState(existing?.balanceDate||new Date().toISOString().slice(0,10));
-          const[dMin,setDMin]=useState(existing?.minimumPayment!=null?String(existing.minimumPayment):"");
-          const[dMinFreq,setDMinFreq]=useState(existing?.minPaymentFreq||"m");
-          const[dMinDay,setDMinDay]=useState(existing?.minPaymentDay!=null?String(existing.minPaymentDay):"1");
-          const save=()=>{
+        const save=()=>{
             if(!dName.trim()||!dBal)return;
             const trimName=dName.trim();
             let catId=existing?.linkedCatId||null;
@@ -2806,7 +2821,9 @@ export default function App({ initialData, onDataChange, theme }){
           };
           const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
           const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
-          return <div>
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
+            <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <div style={{fontSize:16,fontWeight:700}}>{isEdit?"Edit Debt":"Add Debt"}</div>
               <button onClick={()=>setDebtModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
@@ -2856,11 +2873,7 @@ export default function App({ initialData, onDataChange, theme }){
               <button onClick={()=>setDebtModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
               <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>{isEdit?"Save Changes":"Add Debt"}</button>
             </div>
-          </div>;
-        };
-        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
-            <ModalInner/>
+            </div>
           </div>
         </div>;
       })()}
