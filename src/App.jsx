@@ -61,6 +61,55 @@ const FILE_HINTS=[
   ["savings","sv"],["netflix","sn"],["gifts","pg"],["6-mccahon","eh"],
   ["expenses","po"],["income","io"]
 ];
+// Fuzzy category suggestion: maps merchant-related words to category-related words
+const CATEGORY_HINTS={
+  AUTO:["vehicle","car","transport","motor"],MECHANIC:["vehicle","car","maintenance"],
+  TYRE:["vehicle","car","maintenance","tire"],GARAGE:["vehicle","car","maintenance"],
+  HAIR:["hair","beauty","personal"],SALON:["hair","beauty","personal"],
+  BARBER:["hair","beauty","personal"],COSMETIC:["beauty","personal","cosmetic"],
+  PIZZA:["takeaway","food","eating","fast"],BURGER:["takeaway","food","eating","fast"],
+  SUSHI:["takeaway","food","eating","restaurant"],KEBAB:["takeaway","food","eating"],
+  NOODLE:["takeaway","food","eating","asian"],THAI:["takeaway","food","eating","restaurant"],
+  INDIAN:["takeaway","food","eating","restaurant"],CHINESE:["takeaway","food","eating"],
+  FISH:["takeaway","food","eating"],CHICKEN:["takeaway","food","eating","fast"],
+  CAFE:["cafe","coffee","eating","restaurant"],COFFEE:["cafe","coffee","eating"],
+  RESTAURANT:["restaurant","eating","dining"],BAKERY:["food","bakery","eating"],
+  PHARMACY:["health","pharmacy","medical","chemist"],CHEMIST:["health","pharmacy","chemist"],
+  DOCTOR:["health","medical","doctor"],PHYSIO:["health","medical","physio"],
+  DENTAL:["health","medical","dentist"],DENTIST:["health","medical","dentist"],
+  OPTOMETRIST:["health","medical","eye"],VET:["pet","animal","vet"],
+  GARDEN:["garden","home","hardware"],HARDWARE:["hardware","home","maintenance"],
+  SCHOOL:["education","school","kids"],BOOK:["book","education","reading"],
+  GYM:["fitness","health","sport","gym"],SPORT:["sport","fitness","recreation"],
+  CINEMA:["entertainment","movie","recreation"],MOVIE:["entertainment","movie","recreation"],
+  HOTEL:["accommodation","travel","holiday"],FLIGHT:["travel","holiday","transport","air"],
+  AIRLINE:["travel","holiday","transport","air"],PARKING:["parking","transport","vehicle"],
+  INSURANCE:["insurance"],RENT:["rent","housing"],MORTGAGE:["mortgage","housing","home","loan"],
+  PLUMBER:["home","maintenance","housing","trade"],ELECTRICIAN:["home","maintenance","housing","trade"],
+  PAINTER:["home","maintenance","housing","trade"],BUILDER:["home","maintenance","housing","trade"],
+  SUPERMARKET:["grocery","food","supermarket"],GROCERY:["grocery","food","supermarket"],
+  FUEL:["fuel","petrol","transport","vehicle"],PETROL:["fuel","petrol","transport","vehicle"],
+  GAS:["fuel","gas","energy","utility"],ELECTRIC:["power","energy","utility","electricity"],
+  POWER:["power","energy","utility"],WATER:["water","utility"],
+  CLOTHING:["clothing","fashion","apparel"],FASHION:["clothing","fashion","apparel"],
+  DONATION:["charity","giving","donation"],CHARITY:["charity","giving","donation"],
+  SUBSCRIPTION:["subscription","streaming","digital"],STREAMING:["subscription","streaming"],
+  PHONE:["phone","mobile","telecom"],MOBILE:["phone","mobile","telecom"],
+  INTERNET:["internet","broadband","telecom"],BROADBAND:["internet","broadband","telecom"],
+};
+// Fuzzy-match a payee name to category items using CATEGORY_HINTS
+const fuzzyMatchCategory=(payeeWords,catItems)=>{
+  let bestId=null,bestScore=0;
+  const expandedPayee=new Set();
+  payeeWords.forEach(w=>{expandedPayee.add(w.toLowerCase());
+    const hints=CATEGORY_HINTS[w];if(hints)hints.forEach(h=>expandedPayee.add(h))});
+  catItems.forEach(cat=>{
+    const catWords=cat.n.toLowerCase().split(/[\s&\/,_-]+/).filter(w=>w.length>1);
+    let score=0;catWords.forEach(cw=>{if(expandedPayee.has(cw))score++});
+    if(score>bestScore){bestScore=score;bestId=cat.id}
+  });
+  return bestScore>0?bestId:null;
+};
 
 const DARK_P={
   bg:"#0B0F14",card:"#141A22",bd:"rgba(255,255,255,0.06)",bdL:"rgba(255,255,255,0.04)",
@@ -199,6 +248,8 @@ export default function App({ initialData, onDataChange, theme }){
   const[impWeeks,setImpWeeks]=useState({});
   const[impWkList,setImpWkList]=useState([]);
   const[impCurWk,setImpCurWk]=useState(0);
+  const[impPayees,setImpPayees]=useState([]);// {key,payee,variants[],count,suggestedCatId,assignedCatId,tier}
+  const[impPayeeCollapsed,setImpPayeeCollapsed]=useState({auto:true,infrequent:true});
   const[confetti,setConfetti]=useState(false);
   const[particles,setParts]=useState([]);
   // Debt state
@@ -209,12 +260,19 @@ export default function App({ initialData, onDataChange, theme }){
   const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
   const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// total debt repayment budget
   const[snowballSettingsOpen,setSnowballSettingsOpen]=useState(false);
-  // Separate debt-linked categories from regular expenses for cashflow display
+  // Separate debt-linked categories from regular expenses at ITEM level
   const debtLinkedIds=useMemo(()=>new Set(debts.map(d=>d.linkedCatId).filter(Boolean)),[debts]);
-  const ECAT_REG=useMemo(()=>ECAT.filter(cat=>!cat.items.some(it=>debtLinkedIds.has(it.id))),[ECAT,debtLinkedIds]);
-  const ECAT_DEBT=useMemo(()=>ECAT.filter(cat=>cat.items.some(it=>debtLinkedIds.has(it.id))),[ECAT,debtLinkedIds]);
+  // Regular: clone each group with debt-linked items removed, drop empty groups
+  const ECAT_REG=useMemo(()=>ECAT.map(cat=>({
+    ...cat,items:cat.items.filter(it=>!debtLinkedIds.has(it.id))
+  })).filter(cat=>cat.items.length>0),[ECAT,debtLinkedIds]);
+  // Debt: flat array of individual debt-linked items with parent group metadata
+  const ECAT_DEBT_ITEMS=useMemo(()=>debts.filter(d=>d.linkedCatId).map(d=>{
+    for(const cat of ECAT){const it=cat.items.find(it=>it.id===d.linkedCatId);
+      if(it)return{...it,debtName:d.name,debtId:d.id,groupColor:cat.c,groupName:cat.n}}
+    return null}).filter(Boolean),[ECAT,debts]);
   const AEXP_REG=useMemo(()=>ECAT_REG.flatMap(c=>c.items),[ECAT_REG]);
-  const AEXP_DEBT=useMemo(()=>ECAT_DEBT.flatMap(c=>c.items),[ECAT_DEBT]);
+  const AEXP_DEBT=useMemo(()=>ECAT_DEBT_ITEMS,[ECAT_DEBT_ITEMS]);
 
   // ─── Responsive width tracking ───
   const[windowWidth,setWindowWidth]=useState(typeof window!=="undefined"?window.innerWidth:800);
@@ -319,7 +377,58 @@ export default function App({ initialData, onDataChange, theme }){
       }));
       setImpWeeks(weekData);
       const wkList=Object.keys(weekData).map(Number).sort((a,b)=>a-b);
-      setImpWkList(wkList);setImpCurWk(0);setImpStep("review");
+      setImpWkList(wkList);setImpCurWk(0);
+      // Build unique payee list for categorisation step
+      const allAcctIds=new Set(Object.keys(acctMap));
+      const payeeCounts={};// key -> {payee,variants:Set,count,isIncome}
+      Object.values(weekData).forEach(wd=>{
+        Object.entries(wd).forEach(([acctId,txns])=>{
+          txns.forEach(t=>{
+            if(allAcctIds.has(t.otherAcct))return;// skip internal transfers
+            const pk=(t.payee||"").toUpperCase().trim();if(!pk)return;
+            // Group by first 1-2 words for smart grouping
+            const words=pk.split(/\s+/);
+            const groupKey=words.length>1&&words[0].length>=2?words.slice(0,2).join(" "):words[0];
+            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0};
+            payeeCounts[groupKey].variants.add(pk);
+            payeeCounts[groupKey].count++;
+            payeeCounts[groupKey].totalAmt+=t.amt;
+          });
+        });
+      });
+      // Build payee list with auto-suggestions
+      const allCats=[...INC,...ECAT.flatMap(c=>c.items)];
+      const validIds=new Set(allCats.map(c=>c.id));
+      const cm={...catMap};
+      // Clean stale catMap entries
+      Object.keys(cm).forEach(k=>{if(!validIds.has(cm[k]))delete cm[k]});
+      const payeeList=Object.values(payeeCounts).map(p=>{
+        // Try autoCateg with first variant
+        const firstVariant=[...p.variants][0];
+        const mockTxn={payee:firstVariant,code:"",particulars:"",amt:p.totalAmt/p.count};
+        let sugId=autoCateg(mockTxn,cm,"");
+        if(!validIds.has(sugId))sugId=p.totalAmt>0?"io":"po";
+        const isAutoMatched=sugId!=="po"&&sugId!=="io";
+        // Try fuzzy match if fell to fallback
+        let fuzzyId=null;
+        if(!isAutoMatched){
+          const payeeWords=p.payee.split(/\s+/).filter(w=>w.length>1);
+          fuzzyId=fuzzyMatchCategory(payeeWords,allCats);
+        }
+        const assignedId=isAutoMatched?sugId:(fuzzyId||sugId);
+        const tier=isAutoMatched?"auto":(fuzzyId?"suggested":(p.count<=2?"infrequent":"manual"));
+        return{key:p.payee,payee:p.payee,variants:[...p.variants],count:p.count,
+          suggestedCatId:assignedId,assignedCatId:assignedId,tier};
+      }).sort((a,b)=>{
+        // Sort: manual first, then suggested, then infrequent, then auto. Within each tier, by count desc.
+        const tierOrder={manual:0,suggested:1,infrequent:2,auto:3};
+        const ta=tierOrder[a.tier]??4,tb=tierOrder[b.tier]??4;
+        if(ta!==tb)return ta-tb;
+        return b.count-a.count;
+      });
+      setImpPayees(payeeList);
+      setImpPayeeCollapsed({auto:true,infrequent:true});
+      setImpStep("categorise");
       if(accts.length===0){
         setAccts(acctList);
         const d={};acctList.forEach(a=>{d[a.id]=Array(NW).fill(null)});setAcctData(d);
@@ -405,11 +514,16 @@ export default function App({ initialData, onDataChange, theme }){
         }
       });
     });
-    // Categorise
+    // Categorise (with validation against current category IDs)
+    const validIds=new Set(ALL_CATS.map(c=>c.id));
     const newCm={...catMap};
+    // Clean stale catMap entries before using
+    Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const catGroups={};// catId -> [txns]
     extTxns.forEach(t=>{
-      const catId=autoCateg(t,newCm,t._file);
+      let catId=autoCateg(t,newCm,t._file);
+      // Validate: if returned ID doesn't exist in current categories, fall back
+      if(!validIds.has(catId))catId=t.amt>0?"io":"po";
       if(!catGroups[catId])catGroups[catId]=[];
       catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,
         code:t.code,acctId:t.acctId,_file:t._file});
@@ -442,7 +556,78 @@ export default function App({ initialData, onDataChange, theme }){
     setComp(p=>({...p,[wi]:true}));
     if(impCurWk<impWkList.length-1)setImpCurWk(impCurWk+1);
     else{setImpStep("done");setConfetti(true)}
-  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts]);
+  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS]);
+
+  // Apply all remaining weeks at once
+  const applyAllWeeks=useCallback(()=>{
+    const validIds=new Set(ALL_CATS.map(c=>c.id));
+    const newCm={...catMap};
+    Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
+    const allCatTxns={};const allComp={};
+    const newAcctData={};const newCatData={};
+    // Process each remaining week
+    for(let wki=impCurWk;wki<impWkList.length;wki++){
+      const wi=impWkList[wki];
+      const wd=impWeeks[wi]||{};
+      const allAcctIds=new Set();Object.keys(wd).forEach(id=>allAcctIds.add(id));
+      // Account sums
+      Object.entries(wd).forEach(([acctId,txns])=>{
+        if(!newAcctData[acctId])newAcctData[acctId]={};
+        newAcctData[acctId][wi]=Math.round(txns.reduce((s,t)=>s+t.amt,0)*100)/100;
+      });
+      // External txns
+      const extTxns=[];
+      Object.entries(wd).forEach(([acctId,txns])=>{
+        txns.forEach(t=>{if(!allAcctIds.has(t.otherAcct))extTxns.push({...t,acctId})});
+      });
+      const catGroups={};
+      extTxns.forEach(t=>{
+        let catId=autoCateg(t,newCm,t._file);
+        if(!validIds.has(catId))catId=t.amt>0?"io":"po";
+        if(!catGroups[catId])catGroups[catId]=[];
+        catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,code:t.code,acctId:t.acctId,_file:t._file});
+        const pk=(t.payee||"").toUpperCase().trim();
+        if(pk)newCm[pk]=catId;
+      });
+      allCatTxns[wi]=catGroups;
+      // Category sums
+      ALL_CATS.forEach(cat=>{
+        if(!newCatData[cat.id])newCatData[cat.id]={};
+        const txns=catGroups[cat.id];
+        if(txns&&txns.length>0){
+          const sum=txns.reduce((s,t)=>s+t.amt,0);
+          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(sum*100)/100}
+          else{newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)newCatData[cat.id][wi]=Math.round(-sum*100)/100}
+        } else {newCatData[cat.id][wi]=null}
+      });
+      allComp[wi]=true;
+    }
+    // Batch state updates
+    setTxnStore(prev=>{const n={...prev};impWkList.slice(impCurWk).forEach(wi=>{n[wi]={...(impWeeks[wi]||{})}});return n});
+    setAcctData(prev=>{
+      const n={};Object.keys(prev).forEach(k=>{n[k]=[...prev[k]]});
+      Object.entries(newAcctData).forEach(([acctId,weeks])=>{
+        if(!n[acctId])n[acctId]=Array(NW).fill(null);
+        Object.entries(weeks).forEach(([wi,v])=>{n[acctId][Number(wi)]=v});
+      });
+      // Clear weeks with no data for accounts
+      impWkList.slice(impCurWk).forEach(wi=>{Object.keys(n).forEach(k=>{if(!newAcctData[k]||newAcctData[k][wi]===undefined)n[k][wi]=null})});
+      return n;
+    });
+    setCatMap(newCm);
+    setCatTxns(prev=>{const n={...prev};Object.assign(n,allCatTxns);return n});
+    setCatData(prev=>{
+      const n={...prev};
+      ALL_CATS.forEach(cat=>{
+        if(!n[cat.id])n[cat.id]=Array(NW).fill(null);
+        else n[cat.id]=[...n[cat.id]];
+        if(newCatData[cat.id]){Object.entries(newCatData[cat.id]).forEach(([wi,v])=>{n[cat.id][Number(wi)]=v})}
+      });
+      return n;
+    });
+    setComp(p=>({...p,...allComp}));
+    setImpStep("done");setConfetti(true);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
@@ -488,6 +673,14 @@ export default function App({ initialData, onDataChange, theme }){
     setTxnStore(p=>{const n={...p};delete n[wi];return n});
     setCatTxns(p=>{const n={...p};delete n[wi];return n});
     setComp(p=>{const n={...p};delete n[wi];return n});
+  },[]);
+  // Clean up all data referencing a deleted category item
+  const cleanupDeletedCat=useCallback((deletedId)=>{
+    setCatData(p=>{const n={...p};delete n[deletedId];return n});
+    setCatTxns(p=>{const n={...p};Object.keys(n).forEach(wi=>{if(n[wi]&&n[wi][deletedId]){n[wi]={...n[wi]};delete n[wi][deletedId]}});return n});
+    setBudgets(p=>{const n={...p};delete n[deletedId];return n});
+    setCatMap(p=>{const n={};Object.entries(p).forEach(([k,v])=>{if(v!==deletedId)n[k]=v});return n});
+    setDebts(p=>p.map(d=>d.linkedCatId===deletedId?{...d,linkedCatId:null}:d));
   },[]);
   const doComp=useCallback(wi=>{setComp(p=>({...p,[wi]:true}));setConfetti(true)},[]);
   const undoComp=useCallback(wi=>{setComp(p=>{const n={...p};delete n[wi];return n})},[]);
@@ -1105,8 +1298,8 @@ export default function App({ initialData, onDataChange, theme }){
           const wkNet=wkInc-wkExp;
           const closeBal=Math.round((openBal+wkInc-wkExp)*100)/100;
           const isComp=!!comp[wi];
-          // Expense items for this week grouped by category
-          const expRows=ECAT.map(cat=>{
+          // Expense items for this week grouped by category (excluding debt-linked)
+          const expRows=ECAT_REG.map(cat=>{
             const items=cat.items.map(it=>{
               const actual=catData[it.id]&&catData[it.id][wi];
               const bud=budgetForWeek(budgets[it.id],wi);
@@ -1114,6 +1307,12 @@ export default function App({ initialData, onDataChange, theme }){
             }).filter(x=>x.display!=null&&x.display!==0);
             return{n:cat.n,c:cat.c,items};
           }).filter(g=>g.items.length>0);
+          // Debt-linked expense items for this week (read-only)
+          const debtExpRows=ECAT_DEBT_ITEMS.map(it=>{
+            const actual=catData[it.id]&&catData[it.id][wi];
+            const bud=budgetForWeek(budgets[it.id],wi);
+            return{id:it.id,n:it.n,debtName:it.debtName,groupColor:it.groupColor,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
+          }).filter(x=>x.display!=null&&x.display!==0);
           // Income items
           const incRows=INC.map(c=>{
             const actual=catData[c.id]&&catData[c.id][wi];
@@ -1266,9 +1465,28 @@ export default function App({ initialData, onDataChange, theme }){
                 </div>
               ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No expenses expected</div>}
 
+              {/* Debt payments (read-only) */}
+              {debtExpRows.length>0&&<>
+                <div style={{padding:"6px 16px 2px",display:"flex",alignItems:"center",gap:6,borderTop:"1px solid "+P.bd,background:P.w02}}>
+                  <span style={{fontSize:10,fontWeight:600,color:P.blue}}>Debt Payments</span>
+                </div>
+                {debtExpRows.map(it=>
+                  <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL,minHeight:44,
+                    cursor:"pointer"}} onClick={()=>onCatCell(it.id,wi)}>
+                    <span style={{fontSize:12,color:P.tx}}>
+                      <span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:it.groupColor,marginRight:6,verticalAlign:"middle"}}/>
+                      {it.n}
+                      <span style={{fontSize:8,color:P.txM,marginLeft:4,fontStyle:"italic"}}>({it.debtName})</span>
+                    </span>
+                    <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.blue,
+                      opacity:it.actual!=null?1:0.5}}>{fm(it.display)}</span>
+                  </div>
+                )}
+              </>}
+
               {/* Add expense button */}
               {!twAddOpen?<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bd}}>
-                <button onClick={()=>{setTwAddOpen(true);setTwAddCat(AEXP[0]?AEXP[0].id:"")}}
+                <button onClick={()=>{setTwAddOpen(true);setTwAddCat(AEXP_REG[0]?AEXP_REG[0].id:"")}}
                   style={{width:"100%",padding:"8px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>+ Add Expense</button>
               </div>
               :<div style={{padding:"12px 16px",borderTop:"1px solid "+P.bd,background:P.w02}}>
@@ -1276,7 +1494,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
                     style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:44}}>
-                    {ECAT.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
+                    {ECAT_REG.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
                   </select>
                   <div style={{display:"flex",gap:8}}>
                     <div style={{flex:1,display:"flex",alignItems:"center",gap:4}}>
@@ -1885,38 +2103,25 @@ export default function App({ initialData, onDataChange, theme }){
                         return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.neg,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
 
-                    {/* ── DEBT PAYMENTS ── */}
-                    {ECAT_DEBT.length>0&&<>
+                    {/* ── DEBT PAYMENTS (flat item-level) ── */}
+                    {ECAT_DEBT_ITEMS.length>0&&<>
                     <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.blue,background:P.w02,borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>DEBT PAYMENTS</td>
                       {fyWis.map(wi=><td key={wi} style={{background:P.w02,borderBottom:"1px solid "+P.bd}}/>)}</tr>
-                    {ECAT_DEBT.map(cat=>{
-                      const isCollapsed=collCats[cat.n];
-                      const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
-                      const catProj=fyWis.map(wi=>cat.items.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj}));
-                      return [
-                        <tr key={"g_"+cat.n} style={{cursor:"pointer"}} onClick={()=>setCollCats(p=>({...p,[cat.n]:!p[cat.n]}))}>
-                          <td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:600,color:P.tx,borderBottom:"1px solid "+P.bdL,background:P.card}}>
-                            <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
-                            <span style={{fontSize:9,color:P.txM,marginRight:4}}>{isCollapsed?"▶":"▼"}</span>
-                            {cat.n}
+                    {ECAT_DEBT_ITEMS.map(it=>
+                      <tr key={it.id}>
+                        <td style={{...stL,padding:"2px 12px 2px 24px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>
+                          <span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:it.groupColor,marginRight:6,verticalAlign:"middle"}}/>
+                          {it.n}
+                          <span style={{fontSize:7,color:P.txM,marginLeft:4,fontStyle:"italic"}}>({it.debtName})</span>
+                        </td>
+                        {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
+                          return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.blue:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
+                            {pre?<span style={{fontStyle:"normal"}}>–</span>
+                            :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
                           </td>
-                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:v?P.blue:P.txM,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
-                            <span style={{fontStyle:"normal",opacity:pre?0.4:ip&&v?0.65:1}}>{pre?"–":v?fm(v):"–"}</span>
-                          </td>})}
-                        </tr>,
-                        ...(!isCollapsed?cat.items.map(it=>
-                          <tr key={it.id}>
-                            <td style={{...stL,padding:"2px 12px 2px 28px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
-                            {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
-                              return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.blue:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
-                                {pre?<span style={{fontStyle:"normal"}}>–</span>
-                                :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
-                              </td>
-                            })}
-                          </tr>
-                        ):[])
-                      ];
-                    })}
+                        })}
+                      </tr>
+                    )}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.blue,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Debt Payments</td>
                       {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP_DEBT.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP_DEBT.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
                         return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.blue,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
@@ -2695,7 +2900,7 @@ export default function App({ initialData, onDataChange, theme }){
               <input value={cat.n} onChange={e=>{const v=e.target.value;setINC(p=>p.map((c,j)=>j===i?{...c,n:v}:c))}}
                 style={{flex:1,fontSize:11,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
               <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{cat.id}</span>
-              <button onClick={()=>setINC(p=>p.filter((_,j)=>j!==i))}
+              <button onClick={()=>{cleanupDeletedCat(cat.id);setINC(p=>p.filter((_,j)=>j!==i))}}
                 style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
             </div>)}
             <button onClick={()=>{const id="i"+Date.now().toString(36).slice(-3);setINC(p=>[...p,{id,n:"New Income"}])}}
@@ -2711,14 +2916,14 @@ export default function App({ initialData, onDataChange, theme }){
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
                 <input value={grp.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,n:v}:g))}}
                   style={{flex:1,fontSize:12,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
-                <button onClick={()=>setECAT(p=>p.filter((_,j)=>j!==gi))}
+                <button onClick={()=>{grp.items.forEach(it=>cleanupDeletedCat(it.id));setECAT(p=>p.filter((_,j)=>j!==gi))}}
                   style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove category">✕</button>
               </div>
               {grp.items.map((it,ii)=><div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
                   style={{flex:1,fontSize:10,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
                 <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{it.id}</span>
-                <button onClick={()=>setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}
+                <button onClick={()=>{cleanupDeletedCat(it.id);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}}
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
               </div>)}
               <button onClick={()=>{const id="e"+Date.now().toString(36).slice(-4);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:[...g.items,{id,n:"New Category"}]}:g))}}
@@ -2729,7 +2934,7 @@ export default function App({ initialData, onDataChange, theme }){
           </div>
 
           <div style={{borderTop:"1px solid "+P.bdL,marginTop:16,paddingTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:9,color:P.txM}}>Changes save automatically. Removing a category won't delete its data.</span>
+            <span style={{fontSize:9,color:P.txM}}>Changes save automatically. Removing a category will also clear its data and learned categorisations.</span>
             <button onClick={()=>setCatEditorOpen(false)}
               style={{padding:"8px 18px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Done</button>
           </div>
@@ -2765,8 +2970,12 @@ export default function App({ initialData, onDataChange, theme }){
           </div>}
           {cdTxns.length===0&&<div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
 
-          {/* Edit controls for non-completed, non-pre-start category cells */}
-          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&<div style={{marginTop:12}}>
+          {/* Info message for debt-linked category cells */}
+          {cellDetail.isCat&&!cdIsAcct&&debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12,padding:"10px 14px",background:P.w02,borderRadius:8,fontSize:10,color:P.blue,textAlign:"center"}}>
+            This category is linked to a debt. Payments are tracked from imported transactions.
+          </div>}
+          {/* Edit controls for non-completed, non-pre-start, non-debt-linked category cells */}
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12}}>
             <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Edit Value</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
@@ -2806,6 +3015,77 @@ export default function App({ initialData, onDataChange, theme }){
             </label>
             <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
               <button onClick={()=>setImpOpen(false)} style={{padding:"6px 16px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+            </div>
+          </div>}
+
+          {impStep==="categorise"&&<div>
+            <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Categorise Your Payees</div>
+            <div style={{fontSize:11,color:P.txD,marginBottom:10}}>
+              {impPayees.length} unique payees found across {impWkList.length} weeks.
+              Review the assignments below, then continue to import.
+            </div>
+            {(()=>{
+              const manual=impPayees.filter(p=>p.tier==="manual");
+              const suggested=impPayees.filter(p=>p.tier==="suggested");
+              const infrequent=impPayees.filter(p=>p.tier==="infrequent");
+              const auto=impPayees.filter(p=>p.tier==="auto");
+              const allCats=[...INC,...ECAT.flatMap(c=>c.items)];
+              const renderRow=(p,idx)=><div key={p.key} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderTop:"1px solid "+P.bdL,fontSize:10}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,color:P.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.payee}</div>
+                  {p.variants.length>1&&<div style={{fontSize:8,color:P.txM}}>{p.variants.length} variants</div>}
+                </div>
+                <div style={{fontSize:9,color:P.txM,width:32,textAlign:"right",flexShrink:0}}>{p.count}</div>
+                <select value={p.assignedCatId} onChange={e=>{const v=e.target.value;setImpPayees(prev=>prev.map(pp=>pp.key===p.key?{...pp,assignedCatId:v}:pp))}}
+                  style={{width:140,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:6,fontSize:10,background:P.card,color:P.tx,flexShrink:0}}>
+                  <optgroup label="Income">{INC.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}</optgroup>
+                  {ECAT.map(cat=><optgroup key={cat.n} label={cat.n}>{cat.items.map(it=><option key={it.id} value={it.id}>{it.n}</option>)}</optgroup>)}
+                </select>
+              </div>;
+              return <div style={{maxHeight:400,overflow:"auto",borderRadius:8,border:"1px solid "+P.bd,background:P.bg}}>
+                {manual.length>0&&<>
+                  <div style={{padding:"6px 8px",fontSize:10,fontWeight:700,color:P.warn,background:P.warnL,borderBottom:"1px solid "+P.bd,display:"flex",justifyContent:"space-between"}}>
+                    <span>Needs your input ({manual.length})</span><span style={{fontSize:8,color:P.txM}}>Count</span>
+                  </div>
+                  {manual.map(renderRow)}
+                </>}
+                {suggested.length>0&&<>
+                  <div style={{padding:"6px 8px",fontSize:10,fontWeight:700,color:P.blue,background:P.uBg,borderBottom:"1px solid "+P.bd,borderTop:"1px solid "+P.bd,display:"flex",justifyContent:"space-between"}}>
+                    <span>Suggested ({suggested.length})</span><span style={{fontSize:8,color:P.txM}}>Count</span>
+                  </div>
+                  {suggested.map(renderRow)}
+                </>}
+                {auto.length>0&&<>
+                  <div style={{padding:"6px 8px",fontSize:10,fontWeight:700,color:P.pos,background:P.posL,borderBottom:"1px solid "+P.bd,borderTop:"1px solid "+P.bd,display:"flex",justifyContent:"space-between",cursor:"pointer"}}
+                    onClick={()=>setImpPayeeCollapsed(p=>({...p,auto:!p.auto}))}>
+                    <span>{impPayeeCollapsed.auto?"▶":"▼"} Auto-categorised ({auto.length})</span><span style={{fontSize:8,color:P.txM}}>Count</span>
+                  </div>
+                  {!impPayeeCollapsed.auto&&auto.map(renderRow)}
+                </>}
+                {infrequent.length>0&&<>
+                  <div style={{padding:"6px 8px",fontSize:10,fontWeight:700,color:P.txM,background:P.w03,borderBottom:"1px solid "+P.bd,borderTop:"1px solid "+P.bd,display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}
+                    onClick={()=>setImpPayeeCollapsed(p=>({...p,infrequent:!p.infrequent}))}>
+                    <span>{impPayeeCollapsed.infrequent?"▶":"▼"} Infrequent — 1-2 transactions ({infrequent.length})</span>
+                  </div>
+                  {!impPayeeCollapsed.infrequent&&infrequent.map(renderRow)}
+                </>}
+              </div>;
+            })()}
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:12}}>
+              <button onClick={()=>{setImpStep("upload");setImpPayees([])}}
+                style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>← Back</button>
+              <div style={{display:"flex",gap:5}}>
+                <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                <button onClick={()=>{
+                  // Build catMap from payee assignments
+                  const newCm={...catMap};
+                  impPayees.forEach(p=>{p.variants.forEach(v=>{newCm[v]=p.assignedCatId})});
+                  setCatMap(newCm);
+                  setImpStep("review");
+                }} style={{padding:"6px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>
+                  Continue to Import →
+                </button>
+              </div>
             </div>
           </div>}
 
@@ -2854,6 +3134,10 @@ export default function App({ initialData, onDataChange, theme }){
                 style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:impCurWk>0?P.tx:P.txM,fontSize:11,cursor:impCurWk>0?"pointer":"default",minHeight:44}}>← Prev</button>
               <div style={{display:"flex",gap:5}}>
                 <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
+                {impWkList.length-impCurWk>1&&<button onClick={applyAllWeeks}
+                  style={{padding:"6px 16px",borderRadius:8,border:"1px solid "+P.ac+"40",background:P.w04,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>
+                  Apply All ({impWkList.length-impCurWk} weeks)
+                </button>}
                 <button onClick={applyWeekImport}
                   style={{padding:"6px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>
                   {impCurWk<impWkList.length-1?"Confirm & Next →":"Confirm & Finish ✓"}
@@ -2954,10 +3238,14 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
             {cat.items.map(it=>{const b=budgets[it.id]||{};
               const isSnowballManaged=snowballPlan.active&&b._snowball;
-              return <div key={it.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,paddingLeft:14,flexWrap:"wrap",opacity:isSnowballManaged?0.7:1}}>
+              const isDebtLinked=debtLinkedIds.has(it.id);
+              return <div key={it.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,paddingLeft:14,flexWrap:"wrap",opacity:isSnowballManaged||isDebtLinked?0.7:1}}>
                 <span style={{fontSize:10,color:P.txD,width:130,flexShrink:0}}>{it.n}</span>
                 {isSnowballManaged?<>
                   <span style={{fontSize:9,color:P.ac,fontWeight:600,background:P.acL,padding:"2px 8px",borderRadius:5}}>Snowball: {fm(b.amt)}/wk</span>
+                  <span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>Managed on Debt tab</span>
+                </>:isDebtLinked?<>
+                  <span style={{fontSize:9,color:P.blue,fontWeight:600,background:P.w06,padding:"2px 8px",borderRadius:5}}>Linked to debt</span>
                   <span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>Managed on Debt tab</span>
                 </>:<>
                 <span style={{fontSize:10,color:P.txM}}>$</span>
