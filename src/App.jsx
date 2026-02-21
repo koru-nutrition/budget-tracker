@@ -802,6 +802,10 @@ export default function App({ initialData, onDataChange, theme }){
     if(freq==="w")return amt;if(freq==="f")return amt/2;
     if(freq==="m")return amt*12/52;if(freq==="q")return amt*4/52;return amt;
   },[]);
+  const weeklyToFreq=useCallback((amt,freq)=>{
+    if(freq==="w")return amt;if(freq==="f")return amt*2;
+    if(freq==="m")return amt*52/12;if(freq==="q")return amt*52/4;return amt;
+  },[]);
   // Check if a day-of-month falls within the week ending on `sun` (Mon-Sun)
   const dayInWeek=useCallback((day,sun)=>{
     const mon=new Date(sun);mon.setDate(mon.getDate()-6);
@@ -1001,23 +1005,44 @@ export default function App({ initialData, onDataChange, theme }){
   useEffect(()=>{
     if(!ready)return;
     if(!snowballPlan.active){
-      // Clear _snowball flags when snowball is disabled
+      // Apply minimum payments even without snowball
+      const updates={};
+      debts.forEach(d=>{
+        if(d.paidOff||d.dismissed||!d.linkedCatId)return;
+        if(d.minimumPayment&&d.minimumPayment>0){
+          const freq=d.minPaymentFreq||"m";
+          updates[d.linkedCatId]={amt:d.minimumPayment,freq:freq,
+            ...(freq==="m"&&{day:d.minPaymentDay||1}),_snowball:true};
+        }
+      });
       setBudgets(prev=>{
         let changed=false;
         const next={...prev};
+        // Clear snowball-flagged budgets that are no longer needed
         Object.entries(prev).forEach(([k,v])=>{
-          if(v._snowball){next[k]={...v,_snowball:false,amt:0};changed=true}
+          if(v._snowball&&!updates[k]){next[k]={...v,_snowball:false,amt:0};changed=true}
+        });
+        // Apply minimum payment budgets
+        Object.entries(updates).forEach(([catId,bud])=>{
+          const existing=prev[catId]||{};
+          if(existing.amt!==bud.amt||existing.freq!==bud.freq||existing.day!==bud.day||!existing._snowball){
+            next[catId]={...existing,...bud};changed=true;
+          }
         });
         return changed?next:prev;
       });
       return;
     }
+    const snowFreq=debtBudget.freq||"w";
+    const snowDay=debtBudget.day||1;
     const updates={};
     debts.forEach(d=>{
       if(d.paidOff||d.dismissed||!d.linkedCatId)return;
       const wkAlloc=snowballPlan.allocations[d.id]||0;
       if(wkAlloc>0){
-        updates[d.linkedCatId]={amt:Math.round(wkAlloc*100)/100,freq:"w",_snowball:true};
+        updates[d.linkedCatId]={amt:Math.round(weeklyToFreq(wkAlloc,snowFreq)*100)/100,freq:snowFreq,
+          ...(snowFreq==="m"&&{day:snowDay}),
+          ...(snowFreq==="f"&&{offset:0}),_snowball:true};
       }
     });
     if(Object.keys(updates).length===0)return;
@@ -1027,14 +1052,14 @@ export default function App({ initialData, onDataChange, theme }){
       Object.entries(updates).forEach(([catId,bud])=>{
         const existing=prev[catId]||{};
         // Only update if the value actually differs (avoid infinite loop)
-        if(existing.amt!==bud.amt||existing.freq!==bud.freq||!existing._snowball){
+        if(existing.amt!==bud.amt||existing.freq!==bud.freq||existing.day!==bud.day||!existing._snowball){
           next[catId]={...existing,...bud};
           changed=true;
         }
       });
       return changed?next:prev;
     });
-  },[snowballPlan,debts,ready]);// eslint-disable-line
+  },[snowballPlan,debts,debtBudget,ready]);// eslint-disable-line
 
   // ─── Debt payoff trajectories (historic + projected) ───
   const debtTrajectories=useMemo(()=>{
@@ -2897,9 +2922,10 @@ export default function App({ initialData, onDataChange, theme }){
         const SnowInner=()=>{
           const[sAmt,setSAmt]=useState(debtBudget.amt?String(debtBudget.amt):"");
           const[sFreq,setSFreq]=useState(debtBudget.freq||"w");
+          const[sDay,setSDay]=useState(debtBudget.day||1);
           const save=()=>{
             const amt=parseFloat(sAmt)||0;
-            setDebtBudget({amt,freq:sFreq});
+            setDebtBudget({amt,freq:sFreq,...(sFreq==="m"&&{day:sDay})});
             setSnowballSettingsOpen(false);
           };
           const clear=()=>{setDebtBudget({amt:0,freq:"w"});setSnowballSettingsOpen(false)};
@@ -2927,6 +2953,14 @@ export default function App({ initialData, onDataChange, theme }){
                     <option value="m">Monthly</option>
                   </select></div>
               </div>
+              {sFreq==="m"&&<div style={{display:"flex",gap:10}}>
+                <div style={{flex:1}}><label style={labelStyle}>Day of Month</label>
+                  <select value={sDay} onChange={e=>setSDay(e.target.value==="last"?"last":parseInt(e.target.value))} style={inputStyle}>
+                    {Array.from({length:28},(_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}
+                    <option value="last">Last day</option>
+                  </select></div>
+                <div style={{flex:1}}/>
+              </div>}
               {previewWk>0&&<div style={{background:P.w03,borderRadius:10,padding:12}}>
                 <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:6}}>Preview</div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
