@@ -155,6 +155,7 @@ const DEBT_TYPES=[
   {id:"other",label:"Other",icon:"📄"},
 ];
 const DEBT_TYPE_MAP=Object.fromEntries(DEBT_TYPES.map(t=>[t.id,t]));
+const DEBT_TYPE_COLORS={credit_card:"#F59E0B",personal_loan:"#8B5CF6",mortgage:"#3B82F6",car_loan:"#10B981",student_loan:"#6366F1",medical:"#EF4444",store_credit:"#EC4899",hire_purchase:"#F97316",overdraft:"#64748B",other:"#94A3B8"};
 
 // FY boundaries: FY26 ends at week containing March 31
 
@@ -266,10 +267,10 @@ export default function App({ initialData, onDataChange, theme }){
   const ECAT_REG=useMemo(()=>ECAT.map(cat=>({
     ...cat,items:cat.items.filter(it=>!debtLinkedIds.has(it.id))
   })).filter(cat=>cat.items.length>0),[ECAT,debtLinkedIds]);
-  // Debt: flat array of individual debt-linked items with parent group metadata
+  // Debt: flat array of individual debt-linked items with debt type metadata
   const ECAT_DEBT_ITEMS=useMemo(()=>debts.filter(d=>d.linkedCatId).map(d=>{
     for(const cat of ECAT){const it=cat.items.find(it=>it.id===d.linkedCatId);
-      if(it)return{...it,debtName:d.name,debtId:d.id,groupColor:cat.c,groupName:cat.n}}
+      if(it)return{...it,debtName:d.name,debtId:d.id,debtType:d.type||"other",groupColor:DEBT_TYPE_COLORS[d.type]||DEBT_TYPE_COLORS.other}}
     return null}).filter(Boolean),[ECAT,debts]);
   const AEXP_REG=useMemo(()=>ECAT_REG.flatMap(c=>c.items),[ECAT_REG]);
   const AEXP_DEBT=useMemo(()=>ECAT_DEBT_ITEMS,[ECAT_DEBT_ITEMS]);
@@ -2134,7 +2135,7 @@ export default function App({ initialData, onDataChange, theme }){
                         <td style={{...stL,padding:"2px 12px 2px 24px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>
                           <span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:it.groupColor,marginRight:6,verticalAlign:"middle"}}/>
                           {it.n}
-                          <span style={{fontSize:7,color:P.txM,marginLeft:4,fontStyle:"italic"}}>linked</span>
+                          <span style={{fontSize:7,color:P.txM,marginLeft:4,fontStyle:"italic"}}>{(DEBT_TYPE_MAP[it.debtType]||DEBT_TYPE_MAP.other).label}</span>
                         </td>
                         {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
                           return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.blue:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
