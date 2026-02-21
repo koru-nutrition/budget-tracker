@@ -311,6 +311,28 @@ export default function App({ initialData, onDataChange, theme }){
     if(onDataChange)onDataChange(data);
   },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget]);// eslint-disable-line
 
+  // ─── Auto-link: create cashflow categories for any debts missing one ───
+  const debtMigrated=useRef(false);
+  useEffect(()=>{
+    if(!ready||debtMigrated.current)return;
+    debtMigrated.current=true;
+    const allCatIds=new Set(ECAT.flatMap(g=>g.items.map(it=>it.id)));
+    const unlinked=debts.filter(d=>!d.paidOff&&!d.dismissed&&(!d.linkedCatId||!allCatIds.has(d.linkedCatId)));
+    if(unlinked.length===0)return;
+    const newItems=[];const debtUpdates={};
+    unlinked.forEach(d=>{
+      const catId="dc_"+Date.now().toString(36)+"_"+d.id.slice(-4);
+      newItems.push({id:catId,n:d.name});
+      debtUpdates[d.id]=catId;
+    });
+    setECAT(prev=>{
+      const di=prev.findIndex(g=>g.n==="Debt");
+      if(di>=0)return prev.map((g,i)=>i===di?{...g,items:[...g.items,...newItems]}:g);
+      return[...prev,{n:"Debt",c:"#94A3B8",items:newItems}];
+    });
+    setDebts(prev=>prev.map(d=>debtUpdates[d.id]?{...d,linkedCatId:debtUpdates[d.id]}:d));
+  },[ready]);// eslint-disable-line
+
   // ─── Confetti ───
   useEffect(()=>{
     if(!confetti)return;
@@ -2276,10 +2298,7 @@ export default function App({ initialData, onDataChange, theme }){
             {(()=>{
               const traj=debtTrajectories[di.id];
               if(!traj||traj.points.length<2){
-                if(!di.linkedCatId)return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
-                  <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Payoff Forecast</div>
-                  <div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>Link a cashflow category to see your payoff trajectory</div>
-                </div>;
+                if(!di.linkedCatId)return null;
                 return null;
               }
               const rawPts=traj.points;let pts=rawPts;
@@ -2419,7 +2438,7 @@ export default function App({ initialData, onDataChange, theme }){
 
             {/* Delete */}
             <div style={{display:"flex",justifyContent:"flex-end"}}>
-              <button onClick={()=>{if(confirm("Delete this debt? This cannot be undone.")){setDebts(prev=>prev.filter(d=>d.id!==di.id));setDebtView(null)}}}
+              <button onClick={()=>{if(confirm("Delete this debt? This cannot be undone.")){if(di.linkedCatId){cleanupDeletedCat(di.linkedCatId);setECAT(prev=>prev.map(g=>({...g,items:g.items.filter(it=>it.id!==di.linkedCatId)})).filter(g=>g.items.length>0))}setDebts(prev=>prev.filter(d=>d.id!==di.id));setDebtView(null)}}}
                 style={{padding:"8px 18px",borderRadius:8,border:"none",background:P.negL,color:P.neg,fontSize:10,fontWeight:600,cursor:"pointer",minHeight:44}}>Delete Debt</button>
             </div>
           </div>;
@@ -2646,17 +2665,30 @@ export default function App({ initialData, onDataChange, theme }){
           const[dRate,setDRate]=useState(existing?.interestRate!=null?String(existing.interestRate):"");
           const[dBal,setDBal]=useState(existing?.balance!=null?String(existing.balance):"");
           const[dDate,setDDate]=useState(existing?.balanceDate||new Date().toISOString().slice(0,10));
-          const[dLinked,setDLinked]=useState(existing?.linkedCatId||"");
           const[dMin,setDMin]=useState(existing?.minimumPayment!=null?String(existing.minimumPayment):"");
           const save=()=>{
             if(!dName.trim()||!dBal)return;
+            const trimName=dName.trim();
+            let catId=existing?.linkedCatId||null;
+            if(!isEdit){
+              // Auto-create a cashflow category for this debt
+              catId="dc_"+Date.now().toString(36);
+              setECAT(prev=>{
+                const di=prev.findIndex(g=>g.n==="Debt");
+                if(di>=0){return prev.map((g,i)=>i===di?{...g,items:[...g.items,{id:catId,n:trimName}]}:g)}
+                return[...prev,{n:"Debt",c:"#94A3B8",items:[{id:catId,n:trimName}]}];
+              });
+            } else if(catId){
+              // Sync category name if debt name changed
+              setECAT(prev=>prev.map(g=>({...g,items:g.items.map(it=>it.id===catId?{...it,n:trimName}:it)})));
+            }
             const debt={
               id:existing?.id||("d_"+Date.now().toString(36)),
-              name:dName.trim(),type:dType,
+              name:trimName,type:dType,
               interestRate:parseFloat(dRate)||0,
               balance:parseFloat(dBal)||0,
               balanceDate:dDate,
-              linkedCatId:dLinked||null,
+              linkedCatId:catId,
               minimumPayment:parseFloat(dMin)||null,
               paidOff:existing?.paidOff||false,
               paidOffDate:existing?.paidOffDate||null,
@@ -2694,15 +2726,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{flex:1}}><label style={labelStyle}>Balance Date</label>
                   <input type="date" value={dDate} onChange={e=>setDDate(e.target.value)} style={inputStyle}/></div>
               </div>
-              <div><label style={labelStyle}>Link to Cashflow Category</label>
-                <select value={dLinked} onChange={e=>setDLinked(e.target.value)} style={inputStyle}>
-                  <option value="">— None —</option>
-                  {ECAT.map(grp=><optgroup key={grp.n} label={grp.n}>
-                    {grp.items.map(it=><option key={it.id} value={it.id}>{it.n}</option>)}
-                  </optgroup>)}
-                </select>
-                <div style={{fontSize:9,color:P.txD,marginTop:3}}>Payments against this category will automatically reduce your debt balance</div>
-              </div>
+              <div style={{fontSize:9,color:P.txD,background:P.w02,borderRadius:8,padding:"8px 10px"}}>A cashflow category will be {isEdit?"linked":"created"} automatically to track payments against this debt.</div>
             </div>
             <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:18}}>
               <button onClick={()=>setDebtModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
@@ -2910,7 +2934,9 @@ export default function App({ initialData, onDataChange, theme }){
           {/* Expense Type Groups */}
           <div>
             <div style={{fontSize:12,fontWeight:700,color:P.neg,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Expenses</div>
-            {ECAT.map((grp,gi)=><div key={grp.n+gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
+            {ECAT.map((grp,gi)=>{const visItems=grp.items.filter(it=>!debtLinkedIds.has(it.id));
+            if(visItems.length===0&&grp.items.length>0&&grp.items.every(it=>debtLinkedIds.has(it.id)))return null;
+            return <div key={grp.n+gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                 <input type="color" value={grp.c} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,c:v}:g))}}
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
@@ -2919,16 +2945,18 @@ export default function App({ initialData, onDataChange, theme }){
                 <button onClick={()=>{grp.items.forEach(it=>cleanupDeletedCat(it.id));setECAT(p=>p.filter((_,j)=>j!==gi))}}
                   style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove category">✕</button>
               </div>
-              {grp.items.map((it,ii)=><div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
+              {visItems.map(it=>{const ii=grp.items.findIndex(x=>x.id===it.id);return <div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
                   style={{flex:1,fontSize:10,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
                 <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{it.id}</span>
                 <button onClick={()=>{cleanupDeletedCat(it.id);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}}
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
-              </div>)}
+              </div>})}
+              {grp.items.some(it=>debtLinkedIds.has(it.id))&&<div style={{fontSize:9,color:P.txM,marginLeft:16,marginBottom:4,fontStyle:"italic"}}>
+                {grp.items.filter(it=>debtLinkedIds.has(it.id)).length} item(s) managed from the Debt tab</div>}
               <button onClick={()=>{const id="e"+Date.now().toString(36).slice(-4);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:[...g.items,{id,n:"New Category"}]}:g))}}
                 style={{fontSize:9,padding:"6px 10px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.txD,cursor:"pointer",marginLeft:16,marginTop:2}}>+ Add Category</button>
-            </div>)}
+            </div>})}
             <button onClick={()=>{const c=CAT_COLORS[ECAT.length%CAT_COLORS.length];setECAT(p=>[...p,{n:"New Category",c,items:[{id:"e"+Date.now().toString(36).slice(-4),n:"New Category"}]}])}}
               style={{fontSize:10,padding:"8px 14px",borderRadius:8,border:"1px dashed "+P.bd,background:P.w03,color:P.neg,cursor:"pointer",marginTop:4,minHeight:44}}>+ Add Expense Category</button>
           </div>
