@@ -209,6 +209,12 @@ export default function App({ initialData, onDataChange, theme }){
   const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
   const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// total debt repayment budget
   const[snowballSettingsOpen,setSnowballSettingsOpen]=useState(false);
+  // Separate debt-linked categories from regular expenses for cashflow display
+  const debtLinkedIds=useMemo(()=>new Set(debts.map(d=>d.linkedCatId).filter(Boolean)),[debts]);
+  const ECAT_REG=useMemo(()=>ECAT.filter(cat=>!cat.items.some(it=>debtLinkedIds.has(it.id))),[ECAT,debtLinkedIds]);
+  const ECAT_DEBT=useMemo(()=>ECAT.filter(cat=>cat.items.some(it=>debtLinkedIds.has(it.id))),[ECAT,debtLinkedIds]);
+  const AEXP_REG=useMemo(()=>ECAT_REG.flatMap(c=>c.items),[ECAT_REG]);
+  const AEXP_DEBT=useMemo(()=>ECAT_DEBT.flatMap(c=>c.items),[ECAT_DEBT]);
 
   // ─── Responsive width tracking ───
   const[windowWidth,setWindowWidth]=useState(typeof window!=="undefined"?window.innerWidth:800);
@@ -1846,7 +1852,7 @@ export default function App({ initialData, onDataChange, theme }){
                     {/* ── EXPENSE CATEGORIES ── */}
                     <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.neg,background:P.w02,borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>EXPENSES</td>
                       {fyWis.map(wi=><td key={wi} style={{background:P.w02,borderBottom:"1px solid "+P.bd}}/>)}</tr>
-                    {ECAT.map(cat=>{
+                    {ECAT_REG.map(cat=>{
                       const isCollapsed=collCats[cat.n];
                       const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
                       const catProj=fyWis.map(wi=>cat.items.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj}));
@@ -1875,9 +1881,47 @@ export default function App({ initialData, onDataChange, theme }){
                       ];
                     })}
                     <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.neg,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Expenses</td>
-                      {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP_REG.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP_REG.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
                         return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.neg,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
                     </tr>
+
+                    {/* ── DEBT PAYMENTS ── */}
+                    {ECAT_DEBT.length>0&&<>
+                    <tr><td style={{...stL,padding:"6px 12px",fontSize:11,fontWeight:500,color:P.blue,background:P.w02,borderBottom:"1px solid "+P.bd,letterSpacing:"0.08em",textTransform:"uppercase"}}>DEBT PAYMENTS</td>
+                      {fyWis.map(wi=><td key={wi} style={{background:P.w02,borderBottom:"1px solid "+P.bd}}/>)}</tr>
+                    {ECAT_DEBT.map(cat=>{
+                      const isCollapsed=collCats[cat.n];
+                      const catTotal=fyWis.map(wi=>cat.items.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0));
+                      const catProj=fyWis.map(wi=>cat.items.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj}));
+                      return [
+                        <tr key={"g_"+cat.n} style={{cursor:"pointer"}} onClick={()=>setCollCats(p=>({...p,[cat.n]:!p[cat.n]}))}>
+                          <td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:600,color:P.tx,borderBottom:"1px solid "+P.bdL,background:P.card}}>
+                            <span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",background:cat.c,marginRight:6,verticalAlign:"middle"}}/>
+                            <span style={{fontSize:9,color:P.txM,marginRight:4}}>{isCollapsed?"▶":"▼"}</span>
+                            {cat.n}
+                          </td>
+                          {fyWis.map((wi,idx)=>{const pre=wi<startWeek;const v=catTotal[idx];const ip=catProj[idx];return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:v?P.blue:P.txM,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
+                            <span style={{fontStyle:"normal",opacity:pre?0.4:ip&&v?0.65:1}}>{pre?"–":v?fm(v):"–"}</span>
+                          </td>})}
+                        </tr>,
+                        ...(!isCollapsed?cat.items.map(it=>
+                          <tr key={it.id}>
+                            <td style={{...stL,padding:"2px 12px 2px 28px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>{it.n}</td>
+                            {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
+                              return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.blue:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
+                                {pre?<span style={{fontStyle:"normal"}}>–</span>
+                                :<span onClick={()=>onCatCell(it.id,wi)} style={{cursor:"pointer",display:"inline-block",minWidth:50,textAlign:"right",fontStyle:"normal",opacity:cv.proj?0.65:1}}>{cv.v!=null?fm(cv.v):"–"}</span>}
+                              </td>
+                            })}
+                          </tr>
+                        ):[])
+                      ];
+                    })}
+                    <tr><td style={{...stL,padding:"3px 12px",fontSize:10,fontWeight:600,color:P.blue,borderBottom:"1px solid "+P.bd,background:P.card}}>Total Debt Payments</td>
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const t=AEXP_DEBT.reduce((s,it)=>{const cv=getCatVal(it.id,wi);return s+(cv.v||0)},0);const ap=AEXP_DEBT.every(it=>{const cv=getCatVal(it.id,wi);return cv.v==null||cv.proj});
+                        return <td key={wi} style={{...cS,fontWeight:600,color:pre?P.txM:P.blue,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}><span style={{fontStyle:"normal",opacity:pre?0.4:ap&&t?0.65:1}}>{pre?"–":t?fm(t):"–"}</span></td>})}
+                    </tr>
+                    </>}
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
