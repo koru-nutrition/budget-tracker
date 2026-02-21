@@ -1116,7 +1116,7 @@ export default function App({ initialData, onDataChange, theme }){
     const now=new Date();
     let curWi=0;
     for(let i=0;i<W.length;i++){const sun=W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){curWi=i;break}if(now<mon){curWi=Math.max(0,i-1);break}if(i===W.length-1)curWi=i}
-    const MAX_PROJ=520;
+    const MAX_PROJ=1560;// 30 years (matches snowball schedule)
     return debts.reduce((acc,debt)=>{
       const balDate=new Date(debt.balanceDate);
       let startWi=0;
@@ -2440,7 +2440,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12,flexWrap:"wrap",gap:4}}>
                   <div style={{fontSize:12,fontWeight:700}}>Payoff Forecast</div>
                   {traj.projPayoffDate&&<div style={{fontSize:10,fontWeight:600,color:P.pos}}>Debt-free: {traj.projPayoffDate.toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"})}</div>}
-                  {!traj.projPayoffDate&&di.currentBalance>0&&di.weeklyPayment>0&&<div style={{fontSize:10,color:P.neg,fontWeight:600}}>Not paid off within 10 years</div>}
+                  {(()=>{const over10=!traj.projPayoffDate||(traj.projPayoffDate&&(traj.projPayoffDate-new Date())>10*365.25*24*60*60*1000);return over10&&di.currentBalance>0&&di.weeklyPayment>0?<div style={{fontSize:10,color:P.neg,fontWeight:600}}>Not paid off within 10 years</div>:null})()}
                 </div>
                 <div style={{position:"relative"}}>
                   <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}}
