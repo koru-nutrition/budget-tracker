@@ -788,6 +788,11 @@ export default function App({ initialData, onDataChange, theme }){
     }
   },[tab,curWi]);
 
+  // Scroll to top when opening a debt detail view
+  useEffect(()=>{
+    if(debtView!=null) window.scrollTo(0,0);
+  },[debtView]);
+
   // ─── Grid ───
   const wis=Array.from({length:NW},(_,i)=>i);
   const statStyle=s=>({c:{bg:P.cBg,bd:P.cBd},u:{bg:P.uBg,bd:P.uBd},f:{bg:P.fBg,bd:P.fBd},s:{bg:P.sBg,bd:P.sBd}}[s]);
