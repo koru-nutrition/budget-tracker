@@ -744,6 +744,45 @@ export default function App({ initialData, onDataChange, theme }){
     };
   },[debtBudget,debts,debtInfos,freqToWeekly,W,NW]);
 
+  // ─── Sync snowball allocations → linked category budgets ───
+  useEffect(()=>{
+    if(!ready)return;
+    if(!snowballPlan.active){
+      // Clear _snowball flags when snowball is disabled
+      setBudgets(prev=>{
+        let changed=false;
+        const next={...prev};
+        Object.entries(prev).forEach(([k,v])=>{
+          if(v._snowball){next[k]={...v,_snowball:false,amt:0};changed=true}
+        });
+        return changed?next:prev;
+      });
+      return;
+    }
+    const updates={};
+    debts.forEach(d=>{
+      if(d.paidOff||d.dismissed||!d.linkedCatId)return;
+      const wkAlloc=snowballPlan.allocations[d.id]||0;
+      if(wkAlloc>0){
+        updates[d.linkedCatId]={amt:Math.round(wkAlloc*100)/100,freq:"w",_snowball:true};
+      }
+    });
+    if(Object.keys(updates).length===0)return;
+    setBudgets(prev=>{
+      let changed=false;
+      const next={...prev};
+      Object.entries(updates).forEach(([catId,bud])=>{
+        const existing=prev[catId]||{};
+        // Only update if the value actually differs (avoid infinite loop)
+        if(existing.amt!==bud.amt||existing.freq!==bud.freq||!existing._snowball){
+          next[catId]={...existing,...bud};
+          changed=true;
+        }
+      });
+      return changed?next:prev;
+    });
+  },[snowballPlan,debts,ready]);// eslint-disable-line
+
   // ─── Debt payoff trajectories (historic + projected) ───
   const debtTrajectories=useMemo(()=>{
     const now=new Date();
@@ -2870,8 +2909,13 @@ export default function App({ initialData, onDataChange, theme }){
               {cat.n}
             </div>
             {cat.items.map(it=>{const b=budgets[it.id]||{};
-              return <div key={it.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,paddingLeft:14,flexWrap:"wrap"}}>
+              const isSnowballManaged=snowballPlan.active&&b._snowball;
+              return <div key={it.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,paddingLeft:14,flexWrap:"wrap",opacity:isSnowballManaged?0.7:1}}>
                 <span style={{fontSize:10,color:P.txD,width:130,flexShrink:0}}>{it.n}</span>
+                {isSnowballManaged?<>
+                  <span style={{fontSize:9,color:P.ac,fontWeight:600,background:P.acL,padding:"2px 8px",borderRadius:5}}>Snowball: {fm(b.amt)}/wk</span>
+                  <span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>Managed on Debt tab</span>
+                </>:<>
                 <span style={{fontSize:10,color:P.txM}}>$</span>
                 <input type="number" step="0.01" value={b.amt||""} onChange={e=>setBudget(it.id,{amt:e.target.value})}
                   style={{width:75,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:5,fontSize:11,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx}}/>
@@ -2890,12 +2934,13 @@ export default function App({ initialData, onDataChange, theme }){
                   {(b.offset||0)===0?"Even wks":"Odd wks"}
                 </button>}
                 <span style={{fontSize:9,color:P.txM}}>≈ {fm(freqToWeekly(b.amt||0,b.freq||"w"))}/wk</span>
+                </>}
               </div>;
             })}
           </div>)}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:16,gap:8}}>
-            <button onClick={()=>setBudgets({})} style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear All</button>
+            <button onClick={()=>setBudgets(prev=>{const kept={};Object.entries(prev).forEach(([k,v])=>{if(v._snowball)kept[k]=v});return kept})} style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear All</button>
             <button onClick={()=>setBudgetOpen(false)} style={{padding:"7px 18px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,cursor:"pointer",fontWeight:600,minHeight:44}}>Done</button>
           </div>
         </div>
