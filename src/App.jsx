@@ -259,8 +259,17 @@ export default function App({ initialData, onDataChange, theme }){
   const[debtView,setDebtView]=useState(null);// null | debt id (individual view)
   const[debtChargeModal,setDebtChargeModal]=useState(null);// debt id for adding a charge
   const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
-  const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// total debt repayment budget
+  const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// extra snowball amount on top of minimums
   const[snowballSettingsOpen,setSnowballSettingsOpen]=useState(false);
+  const[sAmt,setSAmt]=useState("");
+  const[sFreq,setSFreq]=useState("w");
+  const[sDay,setSDay]=useState(1);
+  const openSnowballSettings=useCallback(()=>{
+    setSAmt(debtBudget.amt?String(debtBudget.amt):"");
+    setSFreq(debtBudget.freq||"w");
+    setSDay(debtBudget.day||1);
+    setSnowballSettingsOpen(true);
+  },[debtBudget]);
   // Separate debt-linked categories from regular expenses at ITEM level
   const debtLinkedIds=useMemo(()=>new Set(debts.map(d=>d.linkedCatId).filter(Boolean)),[debts]);
   // Regular: clone each group with debt-linked items removed, drop empty groups
@@ -931,12 +940,18 @@ export default function App({ initialData, onDataChange, theme }){
   },[debts,catData,budgets,W,freqToWeekly,interestDueInWeek]);
 
   // ─── Snowball allocation engine ───
+  // debtBudget.amt is the EXTRA snowball amount on top of minimums.
+  // Minimums are automatically included for all active debts.
+  // When a debt is paid off, its minimum rolls forward as additional snowball.
   const snowballPlan=useMemo(()=>{
-    const totalWk=debtBudget.amt?freqToWeekly(debtBudget.amt,debtBudget.freq||"w"):0;
-    if(totalWk<=0||debts.length===0)return{active:false,totalWeekly:0,allocations:{},schedule:[],totalMonths:null,debtFreeDate:null};
+    const extraWk=debtBudget.amt?freqToWeekly(debtBudget.amt,debtBudget.freq||"w"):0;
+    if(extraWk<=0||debts.length===0)return{active:false,totalWeekly:0,extraWeekly:0,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:null,debtFreeDate:null};
     const active=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
-    if(active.length===0)return{active:true,totalWeekly:totalWk,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
-    // Current week allocation: minimums (weekly equivalent) first, extra to smallest
+    if(active.length===0)return{active:true,totalWeekly:extraWk,extraWeekly:extraWk,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
+    // Auto-include minimums for all active debts
+    const totalMinWk=active.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
+    const totalWk=extraWk+totalMinWk;
+    // Current week allocation: minimums first, extra to smallest
     const alloc={};
     let rem=totalWk;
     active.forEach(d=>{
@@ -951,7 +966,8 @@ export default function App({ initialData, onDataChange, theme }){
       rem=0;
     }
     // Full snowball projection: simulate week by week with date-aware interest & minimums
-    const MAX_WK=520;// 10 years
+    // totalWk stays constant; as debts are paid off their minimums free up for remaining debts
+    const MAX_WK=1560;// 30 years (handles mortgages)
     const bals={};active.forEach(d=>{bals[d.id]=d.currentBalance});
     const rates={};active.forEach(d=>{rates[d.id]=(d.interestRate||0)/intPeriods(d.interestFreq||"m")/100});
     const schedule=[];// {debtId, debtName, payoffWeek, payoffDate}
@@ -1001,7 +1017,7 @@ export default function App({ initialData, onDataChange, theme }){
     const totalWeeks=lastPayoff?lastPayoff.payoffWeek:null;
     const allPaidOff=active.every(d=>bals[d.id]<=0);
     return{
-      active:true,totalWeekly:totalWk,allocations:alloc,schedule,
+      active:true,totalWeekly:totalWk,extraWeekly:extraWk,totalMinWeekly:totalMinWk,allocations:alloc,schedule,
       totalMonths:totalWeeks!=null?Math.ceil(totalWeeks*7/30):null,
       totalWeeks,
       debtFreeDate:allPaidOff&&lastPayoff?lastPayoff.payoffDate:null,
@@ -2564,32 +2580,32 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:P.tx}}>Snowball Budget</div>
-                <div style={{fontSize:9,color:P.txD}}>Set your total debt repayment budget — minimums first, then extra to smallest balance</div>
+                <div style={{fontSize:9,color:P.txD}}>Minimums are automatic — set your extra snowball amount to accelerate payoff</div>
               </div>
-              <button onClick={()=>setSnowballSettingsOpen(true)}
+              <button onClick={openSnowballSettings}
                 style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:36}}>Configure</button>
             </div>
             {!snowballPlan.active?
               <div style={{padding:14,background:P.w02,borderRadius:10,textAlign:"center"}}>
-                <div style={{fontSize:11,color:P.txD,marginBottom:8}}>Set a total weekly/fortnightly/monthly debt repayment amount to enable automatic snowball allocation</div>
-                <button onClick={()=>setSnowballSettingsOpen(true)}
+                <div style={{fontSize:11,color:P.txD,marginBottom:8}}>Minimum payments are applied automatically. Add an extra snowball amount to accelerate your debt payoff.</div>
+                <button onClick={openSnowballSettings}
                   style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:36}}>Set Snowball Budget</button>
               </div>
             :<div>
               {/* Budget summary */}
               <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
                 {[
-                  {l:"Total Budget",v:fm(debtBudget.amt)+"/"+(debtBudget.freq==="w"?"wk":debtBudget.freq==="f"?"fn":debtBudget.freq==="m"?"mo":"qtr"),c:P.tx},
-                  {l:"Weekly Equivalent",v:fm(snowballPlan.totalWeekly)+"/wk",c:P.tx},
+                  {l:"Extra Snowball",v:fm(debtBudget.amt)+"/"+(debtBudget.freq==="w"?"wk":debtBudget.freq==="f"?"fn":debtBudget.freq==="m"?"mo":"qtr"),c:P.ac},
+                  {l:"Minimums (auto)",v:fm(snowballPlan.totalMinWeekly)+"/wk",c:P.txD},
+                  {l:"Total Weekly",v:fm(snowballPlan.totalWeekly)+"/wk",c:P.tx},
                   {l:"Debt-Free Date",v:snowballPlan.debtFreeDate?snowballPlan.debtFreeDate.toLocaleDateString("en-NZ",{month:"short",year:"numeric"}):(snowballPlan.notPayable?"Never":"—"),c:snowballPlan.debtFreeDate?P.pos:(snowballPlan.notPayable?P.neg:P.txM)},
-                  {l:"Months to Go",v:snowballPlan.totalMonths!=null?snowballPlan.totalMonths:(snowballPlan.notPayable?"∞":"—"),c:P.tx},
                 ].map(s=><div key={s.l} style={{flex:"1 1 100px",background:P.w03,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
                   <div style={{fontSize:8,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{s.l}</div>
                   <div style={{fontSize:14,fontWeight:700,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{s.v}</div>
                 </div>)}
               </div>
               {snowballPlan.notPayable&&<div style={{background:P.negL,borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:10,color:P.neg,fontWeight:500}}>
-                Your budget doesn't cover the minimum payments + interest. Increase your debt budget to make progress.
+                Interest is outpacing payments even with minimums. Consider increasing your extra snowball amount.
               </div>}
               {/* Current week allocation */}
               {activeDebts.length>0&&<div>
@@ -2933,34 +2949,32 @@ export default function App({ initialData, onDataChange, theme }){
 
       {/* ═══ SNOWBALL SETTINGS MODAL ═══ */}
       {snowballSettingsOpen&&(()=>{
-        const SnowInner=()=>{
-          const[sAmt,setSAmt]=useState(debtBudget.amt?String(debtBudget.amt):"");
-          const[sFreq,setSFreq]=useState(debtBudget.freq||"w");
-          const[sDay,setSDay]=useState(debtBudget.day||1);
-          const save=()=>{
-            const amt=parseFloat(sAmt)||0;
-            setDebtBudget({amt,freq:sFreq,...(sFreq==="m"&&{day:sDay})});
-            setSnowballSettingsOpen(false);
-          };
-          const clear=()=>{setDebtBudget({amt:0,freq:"w"});setSnowballSettingsOpen(false)};
-          const previewWk=sAmt?freqToWeekly(parseFloat(sAmt)||0,sFreq):0;
-          const activeDebtsPreview=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
-          const totalMin=activeDebtsPreview.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
-          const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
-          const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
-          return <div>
+        const previewWk=sAmt?freqToWeekly(parseFloat(sAmt)||0,sFreq):0;
+        const activeDebtsPreview=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
+        const totalMin=activeDebtsPreview.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
+        const totalPreviewWk=previewWk+totalMin;
+        const snowSave=()=>{
+          const amt=parseFloat(sAmt)||0;
+          setDebtBudget({amt,freq:sFreq,...(sFreq==="m"&&{day:sDay})});
+          setSnowballSettingsOpen(false);
+        };
+        const snowClear=()=>{setDebtBudget({amt:0,freq:"w"});setSnowballSettingsOpen(false)};
+        const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
+        const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSnowballSettingsOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:16,fontWeight:700}}>Snowball Budget</div>
+              <div style={{fontSize:16,fontWeight:700}}>Extra Snowball Amount</div>
               <button onClick={()=>setSnowballSettingsOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
             </div>
             <div style={{fontSize:11,color:P.txD,marginBottom:14,lineHeight:1.5}}>
-              Set your total debt repayment budget. The snowball engine will automatically allocate minimum payments to all debts,
-              then direct any remaining amount to your smallest balance first.
+              Minimum payments are automatically allocated to all debts. Set your extra snowball amount here —
+              it goes straight to your smallest balance first. As debts are paid off, their minimums roll forward to accelerate the next one.
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div style={{display:"flex",gap:10}}>
-                <div style={{flex:1}}><label style={labelStyle}>Total Amount ($)</label>
-                  <input type="number" step="0.01" min="0" value={sAmt} onChange={e=>setSAmt(e.target.value)} placeholder="e.g. 200" style={inputStyle} autoFocus/></div>
+                <div style={{flex:1}}><label style={labelStyle}>Extra Amount ($)</label>
+                  <input type="number" step="0.01" min="0" value={sAmt} onChange={e=>setSAmt(e.target.value)} placeholder="e.g. 100" style={inputStyle} autoFocus/></div>
                 <div style={{flex:1}}><label style={labelStyle}>Frequency</label>
                   <select value={sFreq} onChange={e=>setSFreq(e.target.value)} style={inputStyle}>
                     <option value="w">Weekly</option><option value="f">Fortnightly</option>
@@ -2975,27 +2989,24 @@ export default function App({ initialData, onDataChange, theme }){
                   </select></div>
                 <div style={{flex:1}}/>
               </div>}
-              {previewWk>0&&<div style={{background:P.w03,borderRadius:10,padding:12}}>
-                <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:6}}>Preview</div>
+              <div style={{background:P.w03,borderRadius:10,padding:12}}>
+                <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:6}}>Budget Breakdown</div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                  <span style={{color:P.txD}}>Weekly equivalent</span>
-                  <span style={{fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(previewWk)}/wk</span>
+                  <span style={{color:P.txD}}>Minimums (automatic)</span>
+                  <span style={{fontWeight:600,color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalMin)}/wk</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                  <span style={{color:P.txD}}>Total minimums needed</span>
-                  <span style={{fontWeight:600,color:totalMin>previewWk?P.neg:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalMin)}/wk</span>
+                  <span style={{color:P.txD}}>Extra snowball</span>
+                  <span style={{fontWeight:600,color:previewWk>0?P.ac:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(previewWk)}/wk</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:10}}>
-                  <span style={{color:P.txD}}>Extra for snowball</span>
-                  <span style={{fontWeight:600,color:previewWk-totalMin>0?P.ac:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(Math.max(0,previewWk-totalMin))}/wk</span>
+                <div style={{borderTop:"1px solid "+P.bd,paddingTop:4,marginTop:2,display:"flex",justifyContent:"space-between",fontSize:10}}>
+                  <span style={{fontWeight:600,color:P.tx}}>Total weekly repayment</span>
+                  <span style={{fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalPreviewWk)}/wk</span>
                 </div>
-                {previewWk<totalMin&&<div style={{fontSize:9,color:P.neg,marginTop:6,fontWeight:500}}>
-                  Budget doesn't cover all minimum payments. Consider increasing to at least {fm(totalMin)}/wk.
+                {activeDebtsPreview.length>0&&previewWk>0&&<div style={{fontSize:9,color:P.ac,marginTop:6,fontWeight:500}}>
+                  Extra {fm(previewWk)}/wk goes to {activeDebtsPreview[0].name} (smallest balance)
                 </div>}
-                {activeDebtsPreview.length>0&&previewWk>=totalMin&&<div style={{fontSize:9,color:P.ac,marginTop:6,fontWeight:500}}>
-                  Extra {fm(previewWk-totalMin)}/wk goes to {activeDebtsPreview[0].name} (smallest balance)
-                </div>}
-              </div>}
+              </div>
               {activeDebtsPreview.length>0&&<div>
                 <div style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Your Debts (smallest first)</div>
                 <div style={{borderRadius:8,border:"1px solid "+P.bd,overflow:"hidden"}}>
@@ -3005,23 +3016,18 @@ export default function App({ initialData, onDataChange, theme }){
                       <div style={{fontWeight:500,color:P.tx}}>{d.name}</div>
                       <div style={{fontSize:8,color:P.txD}}>{fm(d.currentBalance)}{d.minimumPayment?" · min $"+d.minimumPayment+"/"+({w:"wk",f:"fn",m:"mo"}[d.minPaymentFreq]||"mo"):""}</div>
                     </div>
-                    {i===0&&previewWk>totalMin&&<span style={{fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 6px",borderRadius:6}}>FOCUS</span>}
+                    {i===0&&previewWk>0&&<span style={{fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 6px",borderRadius:6}}>FOCUS</span>}
                   </div>)}
                 </div>
               </div>}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:18}}>
-              <button onClick={clear} style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear Budget</button>
+              <button onClick={snowClear} style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear Budget</button>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>setSnowballSettingsOpen(false)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
-                <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
+                <button onClick={snowSave} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
               </div>
             </div>
-          </div>;
-        };
-        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSnowballSettingsOpen(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
-            <SnowInner/>
           </div>
         </div>;
       })()}

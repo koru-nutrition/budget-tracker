@@ -175,13 +175,30 @@ export default function AppWrapper() {
   }, [startSubscription]);
 
   // ─── Debounced save to shared household ───
+  const pendingSave = useRef(null);
   const onDataChange = useCallback((data) => {
     if (!householdId || !latestUid.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    pendingSave.current = { householdId, uid: latestUid.current, data };
     saveTimer.current = setTimeout(() => {
+      pendingSave.current = null;
       saveSharedData(householdId, latestUid.current, data);
     }, 2000);
   }, [householdId]);
+
+  // Flush pending save on page unload to prevent data loss
+  useEffect(() => {
+    const flush = () => {
+      if (pendingSave.current) {
+        const { householdId: hid, uid, data } = pendingSave.current;
+        pendingSave.current = null;
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveSharedData(hid, uid, data);
+      }
+    };
+    window.addEventListener("beforeunload", flush);
+    return () => window.removeEventListener("beforeunload", flush);
+  }, []);
 
   // ─── Theme change handler ───
   const changeTheme = async (newTheme) => {
