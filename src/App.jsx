@@ -1355,6 +1355,67 @@ export default function App({ initialData, onDataChange, theme }){
               <span style={{fontSize:10,fontWeight:700,color:P.pos,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(forecast.wkInc*Math.max(dashEnd-Math.max(dashStart,forecast.lastActual+1)+1,0))}</span>
             </div>
           </div>
+          {/* Debt Summary */}
+          {debts.filter(d=>!d.paidOff&&!d.dismissed).length>0&&(()=>{
+            const activeDts=debtInfos.filter(d=>!d.paidOff&&!d.dismissed).sort((a,b)=>b.currentBalance-a.currentBalance);
+            const debtAtWi=(debtId,wi)=>{
+              const traj=debtTrajectories[debtId];
+              if(!traj||!traj.points.length)return null;
+              if(traj.projPayoffWi!=null&&wi>=traj.projPayoffWi)return 0;
+              let last=null;
+              for(const p of traj.points){if(p.wi<=wi)last=p;else break}
+              return last?last.bal:null;
+            };
+            const startTotal=activeDts.reduce((s,d)=>{const b=debtAtWi(d.id,dashStart);return s+(b!=null?b:d.balance)},0);
+            const endTotal=activeDts.reduce((s,d)=>{const b=debtAtWi(d.id,dashEnd);return s+(b!=null?b:d.currentBalance)},0);
+            const paidDown=startTotal-endTotal;
+            return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{fontSize:15,fontWeight:600,marginBottom:12}}>Debt Summary</div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14}}>
+                {[{l:"Debt at Start of Period",v:startTotal,c:startTotal>0?P.neg:P.pos},
+                  {l:"Projected Debt at End",v:endTotal,c:endTotal>0?P.neg:P.pos},
+                  {l:"Projected Paydown",v:paidDown,c:paidDown>=0?P.pos:P.neg}
+                ].map(s=><div key={s.l} style={{flex:"1 1 120px",textAlign:"center"}}>
+                  <div style={{fontSize:8,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{s.l}</div>
+                  <div style={{fontSize:18,fontWeight:800,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(s.v)}</div>
+                </div>)}
+              </div>
+              {startTotal>0&&paidDown>0&&<div style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <span style={{fontSize:9,fontWeight:600,color:P.pos}}>{(paidDown/startTotal*100).toFixed(1)}% paydown over period</span>
+                  <span style={{fontSize:9,color:P.txD}}>{fm(paidDown)} reduction</span>
+                </div>
+                <div style={{height:6,background:P.w06,borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:Math.max(0,Math.min(100,paidDown/startTotal*100))+"%",background:"linear-gradient(90deg, "+P.pos+", "+P.ac+")",borderRadius:3,transition:"width .5s ease"}}/>
+                </div>
+              </div>}
+              {activeDts.map(d=>{
+                const sb=debtAtWi(d.id,dashStart);
+                const eb=debtAtWi(d.id,dashEnd);
+                const s=sb!=null?sb:d.balance;
+                const e=eb!=null?eb:d.currentBalance;
+                return <div key={d.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6,padding:"4px 0"}}>
+                  <span style={{fontSize:10,color:P.txD,width:90,flexShrink:0}}>{d.name}</span>
+                  <div style={{flex:1,height:16,background:P.w04,borderRadius:4,overflow:"hidden",position:"relative"}}>
+                    {s>0&&<div style={{position:"absolute",height:"100%",width:Math.max(1,e/s*100)+"%",background:P.neg,borderRadius:4,opacity:0.5,transition:"width .4s"}}/>}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+                    <span style={{fontSize:10,fontWeight:600,color:P.neg,fontVariantNumeric:"tabular-nums",width:65,textAlign:"right"}}>{fm(s)}</span>
+                    <span style={{fontSize:9,color:P.txM}}>→</span>
+                    <span style={{fontSize:10,fontWeight:600,color:e>0?P.neg:P.pos,fontVariantNumeric:"tabular-nums",width:65,textAlign:"right"}}>{fm(e)}</span>
+                  </div>
+                </div>;
+              })}
+              <div style={{borderTop:"1px solid "+P.bdL,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:10,fontWeight:600,color:P.neg}}>Total</span>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:10,fontWeight:700,color:P.neg,fontVariantNumeric:"tabular-nums"}}>{fm(startTotal)}</span>
+                  <span style={{fontSize:9,color:P.txM}}>→</span>
+                  <span style={{fontSize:10,fontWeight:700,color:endTotal>0?P.neg:P.pos,fontVariantNumeric:"tabular-nums"}}>{fm(endTotal)}</span>
+                </div>
+              </div>
+            </div>;
+          })()}
           {forecast.wkInc===0&&forecast.wkExp===0&&<div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd,textAlign:"center"}}>
             <div style={{fontSize:11,color:P.txM}}>No budgets set yet — click "Set Budgets" above to see the forecast.</div>
           </div>}
