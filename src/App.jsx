@@ -2134,7 +2134,7 @@ export default function App({ initialData, onDataChange, theme }){
                         <td style={{...stL,padding:"2px 12px 2px 24px",fontSize:9,color:P.txD,borderBottom:"1px solid "+P.bdL,background:P.card}}>
                           <span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:it.groupColor,marginRight:6,verticalAlign:"middle"}}/>
                           {it.n}
-                          <span style={{fontSize:7,color:P.txM,marginLeft:4,fontStyle:"italic"}}>({it.debtName})</span>
+                          <span style={{fontSize:7,color:P.txM,marginLeft:4,fontStyle:"italic"}}>linked</span>
                         </td>
                         {fyWis.map(wi=>{const pre=wi<startWeek;const cv=getCatVal(it.id,wi);const iF=getStat(wi)==="f";
                           return <td key={wi} style={{...cS,fontSize:10,color:pre?P.txM:cv.v!=null?P.blue:P.txM,opacity:pre?0.4:iF&&!cv.proj?0.55:1,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
