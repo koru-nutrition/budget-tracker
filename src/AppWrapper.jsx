@@ -88,6 +88,7 @@ export default function AppWrapper() {
   const [loaded, setLoaded] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
   const saveTimer = useRef(null);
+  const pendingData = useRef(null);
   const unsubData = useRef(null);
   const latestUid = useRef(null);
 
@@ -177,10 +178,31 @@ export default function AppWrapper() {
   // ─── Debounced save to shared household ───
   const onDataChange = useCallback((data) => {
     if (!householdId || !latestUid.current) return;
+    pendingData.current = data;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
+      pendingData.current = null;
       saveSharedData(householdId, latestUid.current, data);
     }, 2000);
+  }, [householdId]);
+
+  // ─── Flush pending save on page unload / tab hide ───
+  useEffect(() => {
+    const flushPendingSave = () => {
+      if (pendingData.current && householdId && latestUid.current) {
+        if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+        saveSharedData(householdId, latestUid.current, pendingData.current);
+        pendingData.current = null;
+      }
+    };
+    const handleBeforeUnload = () => flushPendingSave();
+    const handleVisibilityChange = () => { if (document.visibilityState === "hidden") flushPendingSave(); };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [householdId]);
 
   // ─── Theme change handler ───
