@@ -251,6 +251,7 @@ export default function App({ initialData, onDataChange, theme }){
   const[impCurWk,setImpCurWk]=useState(0);
   const[impPayees,setImpPayees]=useState([]);// {key,payee,variants[],count,suggestedCatId,assignedCatId,tier}
   const[impPayeeCollapsed,setImpPayeeCollapsed]=useState({auto:true,infrequent:true});
+  const[impPayeeExpanded,setImpPayeeExpanded]=useState(null);// key of expanded payee row
   const[confetti,setConfetti]=useState(false);
   const[particles,setParts]=useState([]);
   // Debt state
@@ -445,7 +446,7 @@ export default function App({ initialData, onDataChange, theme }){
       setImpWkList(wkList);setImpCurWk(0);
       // Build unique payee list for categorisation step
       const allAcctIds=new Set(Object.keys(acctMap));
-      const payeeCounts={};// key -> {payee,variants:Set,count,totalAmt,firstCode,firstPar}
+      const payeeCounts={};// key -> {payee,variants:Set,count,totalAmt,firstCode,firstPar,samples[]}
       Object.values(weekData).forEach(wd=>{
         Object.entries(wd).forEach(([acctId,txns])=>{
           txns.forEach(t=>{
@@ -454,12 +455,13 @@ export default function App({ initialData, onDataChange, theme }){
             // Group by first 1-2 words for smart grouping
             const words=pk.split(/\s+/);
             const groupKey=words.length>1&&words[0].length>=2?words.slice(0,2).join(" "):words[0];
-            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0,firstCode:"",firstPar:""};
+            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0,firstCode:"",firstPar:"",samples:[]};
             payeeCounts[groupKey].variants.add(pk);
             payeeCounts[groupKey].count++;
             payeeCounts[groupKey].totalAmt+=t.amt;
             if(!payeeCounts[groupKey].firstCode&&t.code)payeeCounts[groupKey].firstCode=t.code;
             if(!payeeCounts[groupKey].firstPar&&t.particulars)payeeCounts[groupKey].firstPar=t.particulars;
+            if(payeeCounts[groupKey].samples.length<5)payeeCounts[groupKey].samples.push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars||"",code:t.code||""});
           });
         });
       });
@@ -489,6 +491,7 @@ export default function App({ initialData, onDataChange, theme }){
         const assignedId=isAutoMatched?sugId:(fuzzyId||sugId);
         const tier=isAutoMatched?"auto":(fuzzyId?"suggested":(p.count<=2?"infrequent":"manual"));
         return{key:p.payee,payee:p.payee,variants:[...p.variants],count:p.count,
+          totalAmt:p.totalAmt,firstCode:p.firstCode,firstPar:p.firstPar,samples:p.samples,
           suggestedCatId:assignedId,assignedCatId:assignedId,tier};
       }).sort((a,b)=>{
         // Sort: manual first, then suggested, then infrequent, then auto. Within each tier, by count desc.
@@ -499,6 +502,7 @@ export default function App({ initialData, onDataChange, theme }){
       });
       setImpPayees(payeeList);
       setImpPayeeCollapsed({auto:true,infrequent:true});
+      setImpPayeeExpanded(null);
       setImpStep("categorise");
       if(accts.length===0){
         setAccts(acctList);
@@ -3299,7 +3303,7 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Categorise Your Payees</div>
             <div style={{fontSize:11,color:P.txD,marginBottom:10}}>
               {impPayees.length} unique payees found across {impWkList.length} weeks.
-              Review the assignments below, then continue to import.
+              Click any payee to see transaction details. Review the assignments below, then continue to import.
             </div>
             {(()=>{
               const manual=impPayees.filter(p=>p.tier==="manual");
@@ -3307,17 +3311,44 @@ export default function App({ initialData, onDataChange, theme }){
               const infrequent=impPayees.filter(p=>p.tier==="infrequent");
               const auto=impPayees.filter(p=>p.tier==="auto");
               const allCats=[...INC,...ECAT.flatMap(c=>c.items)];
-              const renderRow=(p,idx)=><div key={p.key} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderTop:"1px solid "+P.bdL,fontSize:10}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,color:P.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.payee}</div>
-                  {p.variants.length>1&&<div style={{fontSize:8,color:P.txM}}>{p.variants.length} variants</div>}
+              const isExp=k=>impPayeeExpanded===k;
+              const toggleExp=k=>setImpPayeeExpanded(prev=>prev===k?null:k);
+              const renderRow=(p,idx)=><div key={p.key} style={{borderTop:"1px solid "+P.bdL,fontSize:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",cursor:"pointer"}} onClick={()=>toggleExp(p.key)}>
+                  <div style={{fontSize:8,color:P.txM,width:10,flexShrink:0}}>{isExp(p.key)?"▼":"▶"}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,color:P.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.payee}</div>
+                    {p.variants.length>1&&<div style={{fontSize:8,color:P.txM}}>{p.variants.length} variants</div>}
+                  </div>
+                  <div style={{fontSize:9,color:P.txM,width:50,textAlign:"right",flexShrink:0}}>{fm(p.totalAmt)}</div>
+                  <div style={{fontSize:9,color:P.txM,width:24,textAlign:"right",flexShrink:0}}>{p.count}</div>
+                  <select value={p.assignedCatId} onClick={e=>e.stopPropagation()} onChange={e=>{const v=e.target.value;setImpPayees(prev=>prev.map(pp=>pp.key===p.key?{...pp,assignedCatId:v}:pp))}}
+                    style={{width:140,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:6,fontSize:10,background:P.card,color:P.tx,flexShrink:0}}>
+                    <optgroup label="Income">{INC.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}</optgroup>
+                    {ECAT.map(cat=><optgroup key={cat.n} label={cat.n}>{cat.items.map(it=><option key={it.id} value={it.id}>{it.n}</option>)}</optgroup>)}
+                  </select>
                 </div>
-                <div style={{fontSize:9,color:P.txM,width:32,textAlign:"right",flexShrink:0}}>{p.count}</div>
-                <select value={p.assignedCatId} onChange={e=>{const v=e.target.value;setImpPayees(prev=>prev.map(pp=>pp.key===p.key?{...pp,assignedCatId:v}:pp))}}
-                  style={{width:140,padding:"4px 6px",border:"1px solid "+P.bd,borderRadius:6,fontSize:10,background:P.card,color:P.tx,flexShrink:0}}>
-                  <optgroup label="Income">{INC.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}</optgroup>
-                  {ECAT.map(cat=><optgroup key={cat.n} label={cat.n}>{cat.items.map(it=><option key={it.id} value={it.id}>{it.n}</option>)}</optgroup>)}
-                </select>
+                {isExp(p.key)&&<div style={{padding:"4px 8px 8px 26px",background:P.w03,borderTop:"1px solid "+P.bdL}}>
+                  {(p.firstCode||p.firstPar)&&<div style={{display:"flex",gap:12,marginBottom:4,fontSize:9,color:P.txD}}>
+                    {p.firstCode&&<span><b>Code:</b> {p.firstCode}</span>}
+                    {p.firstPar&&<span><b>Particulars:</b> {p.firstPar}</span>}
+                  </div>}
+                  {p.samples&&p.samples.length>0&&<table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
+                    <thead><tr style={{color:P.txM}}>
+                      <th style={{textAlign:"left",padding:"2px 4px",fontWeight:600}}>Date</th>
+                      <th style={{textAlign:"right",padding:"2px 4px",fontWeight:600}}>Amount</th>
+                      <th style={{textAlign:"left",padding:"2px 4px",fontWeight:600}}>Payee</th>
+                      <th style={{textAlign:"left",padding:"2px 4px",fontWeight:600}}>Particulars</th>
+                    </tr></thead>
+                    <tbody>{p.samples.map((s,si)=><tr key={si} style={{borderTop:"1px solid "+P.bdL}}>
+                      <td style={{padding:"2px 4px",color:P.txD,fontVariantNumeric:"tabular-nums"}}>{s.date}</td>
+                      <td style={{padding:"2px 4px",textAlign:"right",fontWeight:600,color:s.amt>=0?P.pos:P.neg,fontVariantNumeric:"tabular-nums"}}>{fm(s.amt)}</td>
+                      <td style={{padding:"2px 4px",color:P.tx,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.payee}</td>
+                      <td style={{padding:"2px 4px",color:P.txD,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.particulars||"—"}</td>
+                    </tr>)}</tbody>
+                  </table>}
+                  {p.count>5&&<div style={{fontSize:8,color:P.txM,marginTop:3}}>Showing 5 of {p.count} transactions</div>}
+                </div>}
               </div>;
               return <div style={{maxHeight:400,overflow:"auto",borderRadius:8,border:"1px solid "+P.bd,background:P.bg}}>
                 {manual.length>0&&<>
@@ -3349,7 +3380,7 @@ export default function App({ initialData, onDataChange, theme }){
               </div>;
             })()}
             <div style={{display:"flex",justifyContent:"space-between",marginTop:12}}>
-              <button onClick={()=>{setImpStep("upload");setImpPayees([])}}
+              <button onClick={()=>{setImpStep("upload");setImpPayees([]);setImpPayeeExpanded(null)}}
                 style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>← Back</button>
               <div style={{display:"flex",gap:5}}>
                 <button onClick={()=>setImpOpen(false)} style={{padding:"6px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
