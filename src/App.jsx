@@ -55,6 +55,20 @@ const CAT_RULES=[
   {id:"ga",kw:["CHARITY","DONATION","WORLD VISION","COMPASSION"],f:"payee"},
   {id:"eh",kw:["LOAN PAYMT","HOUSING LOAN"],f:"particulars"},
   {id:"eh",kw:["HOUSING LOAN"],f:"code"},
+  // Additional groceries
+  {id:"egr",kw:["FOURSQUARE","BIN INN","MOORE WILSON","FARRO FRESH"],f:"payee"},
+  // Additional fuel
+  {id:"ef",kw:["CHALLENGE","AMPOL"],f:"payee"},
+  // Additional takeaway
+  {id:"et",kw:["WENDY","CARL","TACO","TANK JUICE"],f:"payee"},
+  // Additional restaurant
+  {id:"ere",kw:["EATERY","BISTRO","GRILL ","TAVERN"],f:"payee"},
+  // Additional utilities
+  {id:"ep",kw:["MERIDIAN","TRUSTPOWER","PULSE ENERGY","FLIP ENERGY"],f:"payee"},
+  // Subscriptions
+  {id:"se",kw:["SPOTIFY","DISNEY","APPLE.COM","YOUTUBE","NEON"],f:"payee"},
+  // Church/giving
+  {id:"gc",kw:["CHURCH","TITHE","OFFERING","PARISH"],f:"payee"},
 ];
 const FILE_HINTS=[
   ["insurance","ia"],["food","egr"],["utilities","ep"],["transportation","ef"],
@@ -96,6 +110,54 @@ const CATEGORY_HINTS={
   SUBSCRIPTION:["subscription","streaming","digital"],STREAMING:["subscription","streaming"],
   PHONE:["phone","mobile","telecom"],MOBILE:["phone","mobile","telecom"],
   INTERNET:["internet","broadband","telecom"],BROADBAND:["internet","broadband","telecom"],
+  // NZ supermarkets
+  WOOLWORTHS:["grocery","food","supermarket"],COUNTDOWN:["grocery","food","supermarket"],
+  PAKNSAVE:["grocery","food","supermarket"],FRESHCHOICE:["grocery","food","supermarket"],
+  SUPERVALUE:["grocery","food","supermarket"],FOURSQUARE:["grocery","food","supermarket"],
+  MOORE:["grocery","food","supermarket"],FARRO:["grocery","food","supermarket"],
+  // NZ fuel
+  CALTEX:["fuel","petrol","transport","vehicle"],MOBIL:["fuel","petrol","transport","vehicle"],
+  GULL:["fuel","petrol","transport","vehicle"],NPD:["fuel","petrol","transport","vehicle"],
+  WAITOMO:["fuel","petrol","transport","vehicle"],ALLIED:["fuel","petrol","transport","vehicle"],
+  CHALLENGE:["fuel","petrol","transport","vehicle"],AMPOL:["fuel","petrol","transport","vehicle"],
+  // NZ utilities/telecom
+  VODAFONE:["phone","mobile","telecom","utility"],SPARK:["phone","mobile","telecom","utility"],
+  SKINNY:["phone","mobile","telecom","utility"],ORCON:["internet","broadband","telecom"],
+  CONTACT:["power","energy","utility"],MERCURY:["power","energy","utility"],
+  GENESIS:["power","energy","utility"],MERIDIAN:["power","energy","utility"],
+  TRUSTPOWER:["power","energy","utility"],NOVA:["power","energy","utility"],
+  ROCKGAS:["gas","energy","utility"],ELGAS:["gas","energy","utility"],
+  // NZ fast food
+  MCDONALDS:["takeaway","food","eating","fast"],SUBWAY:["takeaway","food","eating","fast"],
+  DOMINOS:["takeaway","food","eating","fast"],HELL:["takeaway","food","eating","fast"],
+  WENDYS:["takeaway","food","eating","fast"],CARLS:["takeaway","food","eating","fast"],
+  TANK:["takeaway","food","eating"],MUFFIN:["takeaway","food","bakery","eating"],
+  // NZ retail
+  WAREHOUSE:["shopping","retail","clothing"],KMART:["shopping","retail","clothing"],
+  FARMERS:["shopping","retail","clothing"],BRISCOES:["shopping","retail","home"],
+  MITRE:["hardware","home","maintenance"],BUNNINGS:["hardware","home","maintenance"],
+  NOEL:["retail","electronics","shopping"],HARVEY:["retail","electronics","shopping"],
+  GLASSONS:["clothing","fashion","apparel"],HALLENSTEINS:["clothing","fashion","apparel"],
+  COTTON:["clothing","fashion","apparel"],
+  // NZ health
+  UNICHEM:["health","pharmacy","chemist"],LIFE:["health","pharmacy","chemist"],
+  // NZ insurance
+  TOWER:["insurance"],SOUTHERN:["insurance","health"],STATE:["insurance"],
+  // Subscriptions/streaming
+  SPOTIFY:["subscription","streaming","entertainment"],DISNEY:["subscription","streaming","entertainment"],
+  APPLE:["subscription","streaming","digital"],YOUTUBE:["subscription","streaming","entertainment"],
+  NEON:["subscription","streaming","entertainment"],
+  // General patterns
+  TRANSFER:["transfer","banking"],LOAN:["loan","debt","mortgage"],
+  REPAYMENT:["loan","debt","repayment"],ATM:["cash","withdrawal","atm"],
+  EFTPOS:["payment","purchase"],INTEREST:["interest","banking","debt"],
+  // Dining/hospitality
+  EATERY:["restaurant","eating","dining"],BISTRO:["restaurant","eating","dining"],
+  GRILL:["restaurant","eating","dining"],TAVERN:["restaurant","eating","dining"],
+  PUB:["restaurant","eating","dining"],BAR:["restaurant","eating","dining"],
+  // Church/giving
+  CHURCH:["charity","giving","church"],TITHE:["charity","giving","church"],
+  PARISH:["charity","giving","church"],
 };
 // Fuzzy-match a payee name to category items using CATEGORY_HINTS
 const fuzzyMatchCategory=(payeeWords,catItems)=>{
@@ -109,6 +171,14 @@ const fuzzyMatchCategory=(payeeWords,catItems)=>{
     if(score>bestScore){bestScore=score;bestId=cat.id}
   });
   return bestScore>0?bestId:null;
+};
+// Extract prefix (first 1-2 words) from an uppercase payee string for prefix-based matching
+const extractPrefix=pu=>{
+  const words=pu.split(/\s+/).filter(w=>w.length>0);
+  if(words.length===0)return null;
+  // Use first 2 words if available, or first word if it's 3+ chars
+  if(words.length>=2)return words.slice(0,2).join(" ");
+  return words[0].length>=3?words[0]:null;
 };
 
 const DARK_P={
@@ -213,6 +283,8 @@ export default function App({ initialData, onDataChange, theme }){
   const[openingBalance,setOpeningBalance]=useState(0);// balance at start of startWeek
   const[startSetupOpen,setStartSetupOpen]=useState(false);// show start week setup prompt
   const[settingsOpen,setSettingsOpen]=useState(false);// edit start week / opening balance
+  const[fallbackInc,setFallbackInc]=useState(null);// user-chosen fallback income category ID
+  const[fallbackExp,setFallbackExp]=useState(null);// user-chosen fallback expense category ID
   const[hoverBar,setHoverBar]=useState(null);
   const[hoverSlice,setHoverSlice]=useState(null);
   const[insCatModal,setInsCatModal]=useState(null);// {n, c, items:[{id,n}]} for insights category modal
@@ -339,15 +411,17 @@ export default function App({ initialData, onDataChange, theme }){
       if(s.ob!=null)setOpeningBalance(s.ob);
       if(s.db)setDebts(s.db);
       if(s.dbu)setDebtBudget(s.dbu);
+      if(s.fbi)setFallbackInc(s.fbi);
+      if(s.fbe)setFallbackExp(s.fbe);
     }
     setReady(true);
   },[]);// eslint-disable-line
   // ─── Save to Firebase (via props) ───
   useEffect(()=>{
     if(!ready)return;
-    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget};
+    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget,fbi:fallbackInc,fbe:fallbackExp};
     if(onDataChange)onDataChange(data);
-  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget]);// eslint-disable-line
+  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget,fallbackInc,fallbackExp]);// eslint-disable-line
 
   // ─── Auto-link: create cashflow categories for any debts missing one ───
   const debtMigrated=useRef(false);
@@ -385,14 +459,19 @@ export default function App({ initialData, onDataChange, theme }){
   // ─── Auto-categoriser ───
   // validIds: Set of current category IDs (optional, skips validation if absent)
   // fallbacks: {inc, exp} dynamic fallback IDs (optional, uses "io"/"po" if absent)
-  const autoCateg=useCallback((t,cm,fileName,validIds,fallbacks)=>{
+  const autoCateg=useCallback((t,cm,fileName,validIds,fallbacks,catItems)=>{
     const pu=(t.payee||"").toUpperCase().trim();
     const cu=(t.code||"").toUpperCase().trim();
     const par=(t.particulars||"").toUpperCase().trim();
     const vld=id=>!validIds||validIds.has(id);
     const fb=t.amt>0?(fallbacks?.inc||"io"):(fallbacks?.exp||"po");
-    // 1. Learned mapping
+    // 1. Learned mapping (exact)
     if(pu&&cm[pu]&&vld(cm[pu]))return cm[pu];
+    // 1b. Learned mapping (prefix) — generalises corrections across similar payees
+    if(pu){
+      const prefix=extractPrefix(pu);
+      if(prefix){for(const k in cm){if(k.startsWith(prefix+" ")&&vld(cm[k]))return cm[k]}}
+    }
     // 2. Static rules
     for(const rule of CAT_RULES){
       if(!vld(rule.id))continue;
@@ -410,7 +489,13 @@ export default function App({ initialData, onDataChange, theme }){
       if(!vld(catId))continue;
       if(fn.includes(fk))return catId;
     }
-    // 5. Fallback — use dynamic IDs from current categories
+    // 5. Fuzzy category matching via CATEGORY_HINTS
+    if(pu&&catItems){
+      const payeeWords=pu.split(/\s+/).filter(w=>w.length>1);
+      const fuzzyId=fuzzyMatchCategory(payeeWords,catItems);
+      if(fuzzyId&&vld(fuzzyId))return fuzzyId;
+    }
+    // 6. Fallback — use dynamic IDs from current categories
     return fb;
   },[]);
 
@@ -471,25 +556,19 @@ export default function App({ initialData, onDataChange, theme }){
       const cm={...catMap};
       // Clean stale catMap entries
       Object.keys(cm).forEach(k=>{if(!validIds.has(cm[k]))delete cm[k]});
-      // Compute dynamic fallback category IDs from current categories
-      const fallbackIncId=INC.length>0?INC[INC.length-1].id:"io";
-      const fallbackExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+      // Compute fallback category IDs — use user-configured settings if valid, else last item
+      const fallbackIncId=(fallbackInc&&validIds.has(fallbackInc))?fallbackInc:(INC.length>0?INC[INC.length-1].id:"io");
+      const fallbackExpId=(fallbackExp&&validIds.has(fallbackExp))?fallbackExp:(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
       const fallbacks={inc:fallbackIncId,exp:fallbackExpId};
       const payeeList=Object.values(payeeCounts).map(p=>{
         // Try autoCateg with first variant
         const firstVariant=[...p.variants][0];
         const mockTxn={payee:firstVariant,code:p.firstCode||"",particulars:p.firstPar||"",amt:p.totalAmt/p.count};
-        let sugId=autoCateg(mockTxn,cm,"",validIds,fallbacks);
+        let sugId=autoCateg(mockTxn,cm,"",validIds,fallbacks,allCats);
         if(!validIds.has(sugId))sugId=p.totalAmt>0?fallbackIncId:fallbackExpId;
         const isAutoMatched=validIds.has(sugId)&&sugId!==fallbackIncId&&sugId!==fallbackExpId;
-        // Try fuzzy match if fell to fallback
-        let fuzzyId=null;
-        if(!isAutoMatched){
-          const payeeWords=p.payee.split(/\s+/).filter(w=>w.length>1);
-          fuzzyId=fuzzyMatchCategory(payeeWords,allCats);
-        }
-        const assignedId=isAutoMatched?sugId:(fuzzyId||sugId);
-        const tier=isAutoMatched?"auto":(fuzzyId?"suggested":(p.count<=2?"infrequent":"manual"));
+        const assignedId=sugId;
+        const tier=isAutoMatched?"auto":(p.count<=2?"infrequent":"manual");
         return{key:p.payee,payee:p.payee,variants:[...p.variants],count:p.count,
           totalAmt:p.totalAmt,firstCode:p.firstCode,firstPar:p.firstPar,samples:p.samples,
           suggestedCatId:assignedId,assignedCatId:assignedId,tier};
@@ -591,15 +670,15 @@ export default function App({ initialData, onDataChange, theme }){
     });
     // Categorise (with validation against current category IDs)
     const validIds=new Set(ALL_CATS.map(c=>c.id));
-    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
-    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbIncId=(fallbackInc&&validIds.has(fallbackInc))?fallbackInc:(INC.length>0?INC[INC.length-1].id:"io");
+    const fbExpId=(fallbackExp&&validIds.has(fallbackExp))?fallbackExp:(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
     const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     // Clean stale catMap entries before using
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const catGroups={};// catId -> [txns]
     extTxns.forEach(t=>{
-      let catId=autoCateg(t,newCm,t._file,validIds,fbs);
+      let catId=autoCateg(t,newCm,t._file,validIds,fbs,ALL_CATS);
       // Validate: if returned ID doesn't exist in current categories, fall back
       if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
       if(!catGroups[catId])catGroups[catId]=[];
@@ -634,13 +713,13 @@ export default function App({ initialData, onDataChange, theme }){
     setComp(p=>({...p,[wi]:true}));
     if(impCurWk<impWkList.length-1)setImpCurWk(impCurWk+1);
     else{setImpStep("done");setConfetti(true)}
-  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT]);
+  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
 
   // Apply all remaining weeks at once
   const applyAllWeeks=useCallback(()=>{
     const validIds=new Set(ALL_CATS.map(c=>c.id));
-    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
-    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbIncId=(fallbackInc&&validIds.has(fallbackInc))?fallbackInc:(INC.length>0?INC[INC.length-1].id:"io");
+    const fbExpId=(fallbackExp&&validIds.has(fallbackExp))?fallbackExp:(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
     const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
@@ -663,7 +742,7 @@ export default function App({ initialData, onDataChange, theme }){
       });
       const catGroups={};
       extTxns.forEach(t=>{
-        let catId=autoCateg(t,newCm,t._file,validIds,fbs);
+        let catId=autoCateg(t,newCm,t._file,validIds,fbs,ALL_CATS);
         if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
         if(!catGroups[catId])catGroups[catId]=[];
         catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,code:t.code,acctId:t.acctId,_file:t._file});
@@ -708,7 +787,7 @@ export default function App({ initialData, onDataChange, theme }){
     });
     setComp(p=>({...p,...allComp}));
     setImpStep("done");setConfetti(true);
-  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT]);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
@@ -3497,6 +3576,31 @@ export default function App({ initialData, onDataChange, theme }){
           <div style={{background:P.acL,borderRadius:8,padding:"10px 14px",marginBottom:16}}>
             <div style={{fontSize:10,color:P.acD,lineHeight:1.5}}>
               <strong>Tip:</strong> To backfill earlier weeks, move the start week earlier and update the opening balance to match your bank balance at that point.
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:600,color:P.txD,marginBottom:6}}>Default Categories</div>
+            <div style={{fontSize:10,color:P.txM,marginBottom:8,lineHeight:1.4}}>
+              When a transaction can't be auto-categorised, it falls back to these categories.
+            </div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:140}}>
+                <div style={{fontSize:10,color:P.txM,marginBottom:4}}>Income fallback</div>
+                <select value={fallbackInc||""} onChange={e=>setFallbackInc(e.target.value||null)}
+                  style={{width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.bg,color:P.tx}}>
+                  <option value="">Auto (last item)</option>
+                  {INC.map(c=><option key={c.id} value={c.id}>{c.n}</option>)}
+                </select>
+              </div>
+              <div style={{flex:1,minWidth:140}}>
+                <div style={{fontSize:10,color:P.txM,marginBottom:4}}>Expense fallback</div>
+                <select value={fallbackExp||""} onChange={e=>setFallbackExp(e.target.value||null)}
+                  style={{width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.bg,color:P.tx}}>
+                  <option value="">Auto (last item)</option>
+                  {ECAT.flatMap(g=>g.items).map(c=><option key={c.id} value={c.id}>{c.n}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
