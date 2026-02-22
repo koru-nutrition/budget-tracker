@@ -3153,7 +3153,7 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{fontSize:12,fontWeight:700,color:P.pos,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Income</div>
             {INC.map((cat,i)=><div key={cat.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
               <input value={cat.n} onChange={e=>{const v=e.target.value;setINC(p=>p.map((c,j)=>j===i?{...c,n:v}:c))}}
-                style={{flex:1,fontSize:11,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
+                style={{flex:1,fontSize:16,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
               <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{cat.id}</span>
               <button onClick={()=>{cleanupDeletedCat(cat.id);setINC(p=>p.filter((_,j)=>j!==i))}}
                 style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
@@ -3167,18 +3167,18 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{fontSize:12,fontWeight:700,color:P.neg,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Expenses</div>
             {ECAT.map((grp,gi)=>{const visItems=grp.items.filter(it=>!debtLinkedIds.has(it.id));
             if(visItems.length===0&&grp.items.length>0&&grp.items.every(it=>debtLinkedIds.has(it.id)))return null;
-            return <div key={grp.n+gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
+            return <div key={gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                 <input type="color" value={grp.c} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,c:v}:g))}}
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
                 <input value={grp.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,n:v}:g))}}
-                  style={{flex:1,fontSize:12,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
+                  style={{flex:1,fontSize:16,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
                 <button onClick={()=>{grp.items.forEach(it=>cleanupDeletedCat(it.id));setECAT(p=>p.filter((_,j)=>j!==gi))}}
                   style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove category">✕</button>
               </div>
               {visItems.map(it=>{const ii=grp.items.findIndex(x=>x.id===it.id);return <div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
-                  style={{flex:1,fontSize:10,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
+                  style={{flex:1,fontSize:16,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
                 <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{it.id}</span>
                 <button onClick={()=>{cleanupDeletedCat(it.id);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}}
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
