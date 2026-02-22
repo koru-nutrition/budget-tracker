@@ -382,29 +382,35 @@ export default function App({ initialData, onDataChange, theme }){
   },[confetti]);
 
   // ─── Auto-categoriser ───
-  const autoCateg=useCallback((t,cm,fileName)=>{
+  // validIds: Set of current category IDs (optional, skips validation if absent)
+  // fallbacks: {inc, exp} dynamic fallback IDs (optional, uses "io"/"po" if absent)
+  const autoCateg=useCallback((t,cm,fileName,validIds,fallbacks)=>{
     const pu=(t.payee||"").toUpperCase().trim();
     const cu=(t.code||"").toUpperCase().trim();
     const par=(t.particulars||"").toUpperCase().trim();
+    const vld=id=>!validIds||validIds.has(id);
+    const fb=t.amt>0?(fallbacks?.inc||"io"):(fallbacks?.exp||"po");
     // 1. Learned mapping
-    if(pu&&cm[pu])return cm[pu];
+    if(pu&&cm[pu]&&vld(cm[pu]))return cm[pu];
     // 2. Static rules
     for(const rule of CAT_RULES){
+      if(!vld(rule.id))continue;
       const fv=rule.f==="payee"?pu:rule.f==="code"?cu:par;
       if(rule.kw.some(kw=>fv.includes(kw.toUpperCase())))return rule.id;
     }
     // 3. Income-specific
     if(pu.includes("NATURAL HEALT")){
-      if(par.includes("SALARY/WAGES"))return"ir";
-      return"ik";
+      if(par.includes("SALARY/WAGES")&&vld("ir"))return"ir";
+      if(vld("ik"))return"ik";
     }
     // 4. File hints
     const fn=(fileName||"").toLowerCase();
     for(const[fk,catId]of FILE_HINTS){
+      if(!vld(catId))continue;
       if(fn.includes(fk))return catId;
     }
-    // 5. Fallback
-    return t.amt>0?"io":"po";
+    // 5. Fallback — use dynamic IDs from current categories
+    return fb;
   },[]);
 
   // ─── CSV Import ───
@@ -439,7 +445,7 @@ export default function App({ initialData, onDataChange, theme }){
       setImpWkList(wkList);setImpCurWk(0);
       // Build unique payee list for categorisation step
       const allAcctIds=new Set(Object.keys(acctMap));
-      const payeeCounts={};// key -> {payee,variants:Set,count,isIncome}
+      const payeeCounts={};// key -> {payee,variants:Set,count,totalAmt,firstCode,firstPar}
       Object.values(weekData).forEach(wd=>{
         Object.entries(wd).forEach(([acctId,txns])=>{
           txns.forEach(t=>{
@@ -448,10 +454,12 @@ export default function App({ initialData, onDataChange, theme }){
             // Group by first 1-2 words for smart grouping
             const words=pk.split(/\s+/);
             const groupKey=words.length>1&&words[0].length>=2?words.slice(0,2).join(" "):words[0];
-            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0};
+            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0,firstCode:"",firstPar:""};
             payeeCounts[groupKey].variants.add(pk);
             payeeCounts[groupKey].count++;
             payeeCounts[groupKey].totalAmt+=t.amt;
+            if(!payeeCounts[groupKey].firstCode&&t.code)payeeCounts[groupKey].firstCode=t.code;
+            if(!payeeCounts[groupKey].firstPar&&t.particulars)payeeCounts[groupKey].firstPar=t.particulars;
           });
         });
       });
@@ -461,13 +469,17 @@ export default function App({ initialData, onDataChange, theme }){
       const cm={...catMap};
       // Clean stale catMap entries
       Object.keys(cm).forEach(k=>{if(!validIds.has(cm[k]))delete cm[k]});
+      // Compute dynamic fallback category IDs from current categories
+      const fallbackIncId=INC.length>0?INC[INC.length-1].id:"io";
+      const fallbackExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+      const fallbacks={inc:fallbackIncId,exp:fallbackExpId};
       const payeeList=Object.values(payeeCounts).map(p=>{
         // Try autoCateg with first variant
         const firstVariant=[...p.variants][0];
-        const mockTxn={payee:firstVariant,code:"",particulars:"",amt:p.totalAmt/p.count};
-        let sugId=autoCateg(mockTxn,cm,"");
-        if(!validIds.has(sugId))sugId=p.totalAmt>0?"io":"po";
-        const isAutoMatched=sugId!=="po"&&sugId!=="io";
+        const mockTxn={payee:firstVariant,code:p.firstCode||"",particulars:p.firstPar||"",amt:p.totalAmt/p.count};
+        let sugId=autoCateg(mockTxn,cm,"",validIds,fallbacks);
+        if(!validIds.has(sugId))sugId=p.totalAmt>0?fallbackIncId:fallbackExpId;
+        const isAutoMatched=validIds.has(sugId)&&sugId!==fallbackIncId&&sugId!==fallbackExpId;
         // Try fuzzy match if fell to fallback
         let fuzzyId=null;
         if(!isAutoMatched){
@@ -575,14 +587,17 @@ export default function App({ initialData, onDataChange, theme }){
     });
     // Categorise (with validation against current category IDs)
     const validIds=new Set(ALL_CATS.map(c=>c.id));
+    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
+    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     // Clean stale catMap entries before using
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const catGroups={};// catId -> [txns]
     extTxns.forEach(t=>{
-      let catId=autoCateg(t,newCm,t._file);
+      let catId=autoCateg(t,newCm,t._file,validIds,fbs);
       // Validate: if returned ID doesn't exist in current categories, fall back
-      if(!validIds.has(catId))catId=t.amt>0?"io":"po";
+      if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
       if(!catGroups[catId])catGroups[catId]=[];
       catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,
         code:t.code,acctId:t.acctId,_file:t._file});
@@ -615,11 +630,14 @@ export default function App({ initialData, onDataChange, theme }){
     setComp(p=>({...p,[wi]:true}));
     if(impCurWk<impWkList.length-1)setImpCurWk(impCurWk+1);
     else{setImpStep("done");setConfetti(true)}
-  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS]);
+  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT]);
 
   // Apply all remaining weeks at once
   const applyAllWeeks=useCallback(()=>{
     const validIds=new Set(ALL_CATS.map(c=>c.id));
+    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
+    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const allCatTxns={};const allComp={};
@@ -641,8 +659,8 @@ export default function App({ initialData, onDataChange, theme }){
       });
       const catGroups={};
       extTxns.forEach(t=>{
-        let catId=autoCateg(t,newCm,t._file);
-        if(!validIds.has(catId))catId=t.amt>0?"io":"po";
+        let catId=autoCateg(t,newCm,t._file,validIds,fbs);
+        if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
         if(!catGroups[catId])catGroups[catId]=[];
         catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,code:t.code,acctId:t.acctId,_file:t._file});
         const pk=(t.payee||"").toUpperCase().trim();
@@ -686,7 +704,7 @@ export default function App({ initialData, onDataChange, theme }){
     });
     setComp(p=>({...p,...allComp}));
     setImpStep("done");setConfetti(true);
-  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS]);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
