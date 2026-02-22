@@ -636,79 +636,79 @@ export default function App({ initialData, onDataChange, theme }){
     else{setImpStep("done");setConfetti(true)}
   },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT]);
 
-  // Apply all remaining weeks at once
+  // Apply all remaining weeks at once — uses same per-week logic as applyWeekImport
   const applyAllWeeks=useCallback(()=>{
     const validIds=new Set(ALL_CATS.map(c=>c.id));
     const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
     const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
     const fbs={inc:fbIncId,exp:fbExpId};
-    const newCm={...catMap};
-    Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
-    const allCatTxns={};const allComp={};
-    const newAcctData={};const newCatData={};
-    // Process each remaining week
+    const runningCm={...catMap};
+    Object.keys(runningCm).forEach(k=>{if(!validIds.has(runningCm[k]))delete runningCm[k]});
+    // Process each remaining week using the same pattern as applyWeekImport
     for(let wki=impCurWk;wki<impWkList.length;wki++){
       const wi=impWkList[wki];
       const wd=impWeeks[wi]||{};
-      const allAcctIds=new Set();Object.keys(wd).forEach(id=>allAcctIds.add(id));
-      // Account sums
-      Object.entries(wd).forEach(([acctId,txns])=>{
-        if(!newAcctData[acctId])newAcctData[acctId]={};
-        newAcctData[acctId][wi]=Math.round(txns.reduce((s,t)=>s+t.amt,0)*100)/100;
+      const allAcctIds=new Set();
+      Object.keys(wd).forEach(id=>allAcctIds.add(id));
+      // Store raw txns per account
+      setTxnStore(prev=>{const n={...prev};n[wi]={...wd};return n});
+      // Sum per account (ALL transactions)
+      setAcctData(prev=>{
+        const n={};Object.keys(prev).forEach(k=>{n[k]=[...prev[k]]});
+        Object.keys(n).forEach(k=>{n[k][wi]=null});
+        Object.entries(wd).forEach(([acctId,txns])=>{
+          if(!n[acctId])n[acctId]=Array(NW).fill(null);
+          n[acctId][wi]=Math.round(txns.reduce((s,t)=>s+t.amt,0)*100)/100;
+        });
+        return n;
       });
-      // External txns
+      // Categorise EXTERNAL transactions only (where otherAcct not in our accounts)
       const extTxns=[];
       Object.entries(wd).forEach(([acctId,txns])=>{
-        txns.forEach(t=>{if(!allAcctIds.has(t.otherAcct))extTxns.push({...t,acctId})});
+        txns.forEach(t=>{
+          if(!allAcctIds.has(t.otherAcct)){
+            extTxns.push({...t,acctId});
+          }
+        });
       });
+      // Categorise (with validation against current category IDs)
       const catGroups={};
       extTxns.forEach(t=>{
-        let catId=autoCateg(t,newCm,t._file,validIds,fbs);
+        let catId=autoCateg(t,runningCm,t._file,validIds,fbs);
         if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
         if(!catGroups[catId])catGroups[catId]=[];
-        catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,code:t.code,acctId:t.acctId,_file:t._file});
+        catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,
+          code:t.code,acctId:t.acctId,_file:t._file});
         const pk=(t.payee||"").toUpperCase().trim();
-        if(pk)newCm[pk]=catId;
+        if(pk)runningCm[pk]=catId;
       });
-      allCatTxns[wi]=catGroups;
-      // Category sums
-      ALL_CATS.forEach(cat=>{
-        if(!newCatData[cat.id])newCatData[cat.id]={};
-        const txns=catGroups[cat.id];
-        if(txns&&txns.length>0){
-          const sum=txns.reduce((s,t)=>s+t.amt,0);
-          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(sum*100)/100}
-          else{newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)newCatData[cat.id][wi]=Math.round(-sum*100)/100}
-        } else {newCatData[cat.id][wi]=null}
+      setCatTxns(prev=>{const n={...prev};n[wi]=catGroups;return n});
+      // Sum categories
+      setCatData(prev=>{
+        const n={...prev};
+        ALL_CATS.forEach(cat=>{
+          if(!n[cat.id])n[cat.id]=Array(NW).fill(null);
+          else n[cat.id]=[...n[cat.id]];
+          const txns=catGroups[cat.id];
+          if(txns&&txns.length>0){
+            const sum=txns.reduce((s,t)=>s+t.amt,0);
+            if(INC_IDS.has(cat.id)){
+              n[cat.id][wi]=Math.round(sum*100)/100;
+            } else {
+              n[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;
+              if(sum>0)n[cat.id][wi]=Math.round(-sum*100)/100;
+            }
+          } else {
+            n[cat.id][wi]=null;
+          }
+        });
+        return n;
       });
-      allComp[wi]=true;
+      setComp(p=>({...p,[wi]:true}));
     }
-    // Batch state updates
-    setTxnStore(prev=>{const n={...prev};impWkList.slice(impCurWk).forEach(wi=>{n[wi]={...(impWeeks[wi]||{})}});return n});
-    setAcctData(prev=>{
-      const n={};Object.keys(prev).forEach(k=>{n[k]=[...prev[k]]});
-      Object.entries(newAcctData).forEach(([acctId,weeks])=>{
-        if(!n[acctId])n[acctId]=Array(NW).fill(null);
-        Object.entries(weeks).forEach(([wi,v])=>{n[acctId][Number(wi)]=v});
-      });
-      // Clear weeks with no data for accounts
-      impWkList.slice(impCurWk).forEach(wi=>{Object.keys(n).forEach(k=>{if(!newAcctData[k]||newAcctData[k][wi]===undefined)n[k][wi]=null})});
-      return n;
-    });
-    setCatMap(newCm);
-    setCatTxns(prev=>{const n={...prev};Object.assign(n,allCatTxns);return n});
-    setCatData(prev=>{
-      const n={...prev};
-      ALL_CATS.forEach(cat=>{
-        if(!n[cat.id])n[cat.id]=Array(NW).fill(null);
-        else n[cat.id]=[...n[cat.id]];
-        if(newCatData[cat.id]){Object.entries(newCatData[cat.id]).forEach(([wi,v])=>{n[cat.id][Number(wi)]=v})}
-      });
-      return n;
-    });
-    setComp(p=>({...p,...allComp}));
+    setCatMap(runningCm);
     setImpStep("done");setConfetti(true);
-  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT]);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT,INC_IDS,NW]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
