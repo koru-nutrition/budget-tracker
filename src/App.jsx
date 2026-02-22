@@ -641,12 +641,25 @@ export default function App({ initialData, onDataChange, theme }){
     return all.sort((a,b)=>a.date.localeCompare(b.date));
   },[curImpWi,impWeeks]);
 
+  // Build catMap directly from impPayees to ensure user's category selections are always used,
+  // regardless of whether setCatMap from "Continue to Import" has been captured by the closure.
+  const buildCatMapFromPayees=(baseCm,validIds)=>{
+    const cm={...baseCm};
+    impPayees.forEach(p=>{p.variants.forEach(v=>{if(validIds.has(p.assignedCatId))cm[v]=p.assignedCatId})});
+    Object.keys(cm).forEach(k=>{if(!validIds.has(cm[k]))delete cm[k]});
+    return cm;
+  };
+  // Collect ALL account IDs across all import weeks (matches parseCSVs behaviour for transfer detection)
+  const allImportAcctIds=useMemo(()=>{
+    const ids=new Set();
+    Object.values(impWeeks).forEach(wd=>{Object.keys(wd).forEach(id=>ids.add(id))});
+    return ids;
+  },[impWeeks]);
+
   const applyWeekImport=useCallback(()=>{
     if(curImpWi==null)return;
     const wi=curImpWi;
     const wd=impWeeks[wi]||{};
-    const allAcctIds=new Set();
-    Object.keys(wd).forEach(id=>allAcctIds.add(id));
     // Store raw txns per account
     setTxnStore(prev=>{const n={...prev};n[wi]={...wd};return n});
     // Sum per account (ALL transactions)
@@ -659,11 +672,11 @@ export default function App({ initialData, onDataChange, theme }){
       });
       return n;
     });
-    // Categorise EXTERNAL transactions only (where otherAcct not in our accounts)
+    // Categorise EXTERNAL transactions only (where otherAcct not in any imported account)
     const extTxns=[];
     Object.entries(wd).forEach(([acctId,txns])=>{
       txns.forEach(t=>{
-        if(!allAcctIds.has(t.otherAcct)){
+        if(!allImportAcctIds.has(t.otherAcct)){
           extTxns.push({...t,acctId});
         }
       });
@@ -673,9 +686,7 @@ export default function App({ initialData, onDataChange, theme }){
     const fbIncId=(fallbackInc&&validIds.has(fallbackInc))?fallbackInc:(INC.length>0?INC[INC.length-1].id:"io");
     const fbExpId=(fallbackExp&&validIds.has(fallbackExp))?fallbackExp:(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
     const fbs={inc:fbIncId,exp:fbExpId};
-    const newCm={...catMap};
-    // Clean stale catMap entries before using
-    Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
+    const newCm=buildCatMapFromPayees(catMap,validIds);
     const catGroups={};// catId -> [txns]
     extTxns.forEach(t=>{
       let catId=autoCateg(t,newCm,t._file,validIds,fbs,ALL_CATS);
@@ -713,7 +724,7 @@ export default function App({ initialData, onDataChange, theme }){
     setComp(p=>({...p,[wi]:true}));
     if(impCurWk<impWkList.length-1)setImpCurWk(impCurWk+1);
     else{setImpStep("done");setConfetti(true)}
-  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
+  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,allImportAcctIds,impPayees,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
 
   // Apply all remaining weeks at once
   const applyAllWeeks=useCallback(()=>{
@@ -721,24 +732,23 @@ export default function App({ initialData, onDataChange, theme }){
     const fbIncId=(fallbackInc&&validIds.has(fallbackInc))?fallbackInc:(INC.length>0?INC[INC.length-1].id:"io");
     const fbExpId=(fallbackExp&&validIds.has(fallbackExp))?fallbackExp:(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
     const fbs={inc:fbIncId,exp:fbExpId};
-    const newCm={...catMap};
-    Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
+    // Build catMap directly from impPayees to guarantee user's category selections are applied
+    const newCm=buildCatMapFromPayees(catMap,validIds);
     const allCatTxns={};const allComp={};
     const newAcctData={};const newCatData={};
     // Process each remaining week
     for(let wki=impCurWk;wki<impWkList.length;wki++){
       const wi=impWkList[wki];
       const wd=impWeeks[wi]||{};
-      const allAcctIds=new Set();Object.keys(wd).forEach(id=>allAcctIds.add(id));
       // Account sums
       Object.entries(wd).forEach(([acctId,txns])=>{
         if(!newAcctData[acctId])newAcctData[acctId]={};
         newAcctData[acctId][wi]=Math.round(txns.reduce((s,t)=>s+t.amt,0)*100)/100;
       });
-      // External txns
+      // External txns — use global imported account IDs (matches parseCSVs behaviour)
       const extTxns=[];
       Object.entries(wd).forEach(([acctId,txns])=>{
-        txns.forEach(t=>{if(!allAcctIds.has(t.otherAcct))extTxns.push({...t,acctId})});
+        txns.forEach(t=>{if(!allImportAcctIds.has(t.otherAcct))extTxns.push({...t,acctId})});
       });
       const catGroups={};
       extTxns.forEach(t=>{
@@ -787,7 +797,7 @@ export default function App({ initialData, onDataChange, theme }){
     });
     setComp(p=>({...p,...allComp}));
     setImpStep("done");setConfetti(true);
-  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,allImportAcctIds,impPayees,ALL_CATS,INC,ECAT,fallbackInc,fallbackExp]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
