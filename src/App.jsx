@@ -259,8 +259,44 @@ export default function App({ initialData, onDataChange, theme }){
   const[debtView,setDebtView]=useState(null);// null | debt id (individual view)
   const[debtChargeModal,setDebtChargeModal]=useState(null);// debt id for adding a charge
   const[debtExtraModal,setDebtExtraModal]=useState(null);// debt id for adding extra payment
-  const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// total debt repayment budget
+  const[debtBudget,setDebtBudget]=useState({amt:0,freq:"w"});// extra snowball amount on top of minimums
   const[snowballSettingsOpen,setSnowballSettingsOpen]=useState(false);
+  const[hoverDebtPt,setHoverDebtPt]=useState(null);// hover index for combined debt payoff chart
+  const[sAmt,setSAmt]=useState("");
+  const[sFreq,setSFreq]=useState("w");
+  const[sDay,setSDay]=useState(1);
+  // Debt form state (lifted to App level to prevent re-render state loss)
+  const[dName,setDName]=useState("");
+  const[dType,setDType]=useState("credit_card");
+  const[dRate,setDRate]=useState("");
+  const[dIntDay,setDIntDay]=useState("1");
+  const[dIntFreq,setDIntFreq]=useState("m");
+  const[dBal,setDBal]=useState("");
+  const[dDate,setDDate]=useState(()=>new Date().toISOString().slice(0,10));
+  const[dMin,setDMin]=useState("");
+  const[dMinFreq,setDMinFreq]=useState("m");
+  const[dMinDay,setDMinDay]=useState("1");
+  const openSnowballSettings=useCallback(()=>{
+    setSAmt(debtBudget.amt?String(debtBudget.amt):"");
+    setSFreq(debtBudget.freq||"w");
+    setSDay(debtBudget.day||1);
+    setSnowballSettingsOpen(true);
+  },[debtBudget]);
+  // Initialize debt form state when modal opens
+  useEffect(()=>{
+    if(debtModal==null)return;
+    const ex=debtModal!=="add"?debtModal:null;
+    setDName(ex?.name||"");
+    setDType(ex?.type||"credit_card");
+    setDRate(ex?.interestRate!=null?String(ex.interestRate):"");
+    setDIntDay(ex?.interestDay!=null?String(ex.interestDay):"1");
+    setDIntFreq(ex?.interestFreq||ex?.minPaymentFreq||"m");
+    setDBal(ex?.balance!=null?String(ex.balance):"");
+    setDDate(ex?.balanceDate||new Date().toISOString().slice(0,10));
+    setDMin(ex?.minimumPayment!=null?String(ex.minimumPayment):"");
+    setDMinFreq(ex?.minPaymentFreq||"m");
+    setDMinDay(ex?.minPaymentDay!=null?String(ex.minPaymentDay):"1");
+  },[debtModal]);
   // Separate debt-linked categories from regular expenses at ITEM level
   const debtLinkedIds=useMemo(()=>new Set(debts.map(d=>d.linkedCatId).filter(Boolean)),[debts]);
   // Regular: clone each group with debt-linked items removed, drop empty groups
@@ -346,29 +382,35 @@ export default function App({ initialData, onDataChange, theme }){
   },[confetti]);
 
   // ─── Auto-categoriser ───
-  const autoCateg=useCallback((t,cm,fileName)=>{
+  // validIds: Set of current category IDs (optional, skips validation if absent)
+  // fallbacks: {inc, exp} dynamic fallback IDs (optional, uses "io"/"po" if absent)
+  const autoCateg=useCallback((t,cm,fileName,validIds,fallbacks)=>{
     const pu=(t.payee||"").toUpperCase().trim();
     const cu=(t.code||"").toUpperCase().trim();
     const par=(t.particulars||"").toUpperCase().trim();
+    const vld=id=>!validIds||validIds.has(id);
+    const fb=t.amt>0?(fallbacks?.inc||"io"):(fallbacks?.exp||"po");
     // 1. Learned mapping
-    if(pu&&cm[pu])return cm[pu];
+    if(pu&&cm[pu]&&vld(cm[pu]))return cm[pu];
     // 2. Static rules
     for(const rule of CAT_RULES){
+      if(!vld(rule.id))continue;
       const fv=rule.f==="payee"?pu:rule.f==="code"?cu:par;
       if(rule.kw.some(kw=>fv.includes(kw.toUpperCase())))return rule.id;
     }
     // 3. Income-specific
     if(pu.includes("NATURAL HEALT")){
-      if(par.includes("SALARY/WAGES"))return"ir";
-      return"ik";
+      if(par.includes("SALARY/WAGES")&&vld("ir"))return"ir";
+      if(vld("ik"))return"ik";
     }
     // 4. File hints
     const fn=(fileName||"").toLowerCase();
     for(const[fk,catId]of FILE_HINTS){
+      if(!vld(catId))continue;
       if(fn.includes(fk))return catId;
     }
-    // 5. Fallback
-    return t.amt>0?"io":"po";
+    // 5. Fallback — use dynamic IDs from current categories
+    return fb;
   },[]);
 
   // ─── CSV Import ───
@@ -403,7 +445,7 @@ export default function App({ initialData, onDataChange, theme }){
       setImpWkList(wkList);setImpCurWk(0);
       // Build unique payee list for categorisation step
       const allAcctIds=new Set(Object.keys(acctMap));
-      const payeeCounts={};// key -> {payee,variants:Set,count,isIncome}
+      const payeeCounts={};// key -> {payee,variants:Set,count,totalAmt,firstCode,firstPar}
       Object.values(weekData).forEach(wd=>{
         Object.entries(wd).forEach(([acctId,txns])=>{
           txns.forEach(t=>{
@@ -412,10 +454,12 @@ export default function App({ initialData, onDataChange, theme }){
             // Group by first 1-2 words for smart grouping
             const words=pk.split(/\s+/);
             const groupKey=words.length>1&&words[0].length>=2?words.slice(0,2).join(" "):words[0];
-            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0};
+            if(!payeeCounts[groupKey])payeeCounts[groupKey]={payee:groupKey,variants:new Set(),count:0,totalAmt:0,firstCode:"",firstPar:""};
             payeeCounts[groupKey].variants.add(pk);
             payeeCounts[groupKey].count++;
             payeeCounts[groupKey].totalAmt+=t.amt;
+            if(!payeeCounts[groupKey].firstCode&&t.code)payeeCounts[groupKey].firstCode=t.code;
+            if(!payeeCounts[groupKey].firstPar&&t.particulars)payeeCounts[groupKey].firstPar=t.particulars;
           });
         });
       });
@@ -425,13 +469,17 @@ export default function App({ initialData, onDataChange, theme }){
       const cm={...catMap};
       // Clean stale catMap entries
       Object.keys(cm).forEach(k=>{if(!validIds.has(cm[k]))delete cm[k]});
+      // Compute dynamic fallback category IDs from current categories
+      const fallbackIncId=INC.length>0?INC[INC.length-1].id:"io";
+      const fallbackExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+      const fallbacks={inc:fallbackIncId,exp:fallbackExpId};
       const payeeList=Object.values(payeeCounts).map(p=>{
         // Try autoCateg with first variant
         const firstVariant=[...p.variants][0];
-        const mockTxn={payee:firstVariant,code:"",particulars:"",amt:p.totalAmt/p.count};
-        let sugId=autoCateg(mockTxn,cm,"");
-        if(!validIds.has(sugId))sugId=p.totalAmt>0?"io":"po";
-        const isAutoMatched=sugId!=="po"&&sugId!=="io";
+        const mockTxn={payee:firstVariant,code:p.firstCode||"",particulars:p.firstPar||"",amt:p.totalAmt/p.count};
+        let sugId=autoCateg(mockTxn,cm,"",validIds,fallbacks);
+        if(!validIds.has(sugId))sugId=p.totalAmt>0?fallbackIncId:fallbackExpId;
+        const isAutoMatched=validIds.has(sugId)&&sugId!==fallbackIncId&&sugId!==fallbackExpId;
         // Try fuzzy match if fell to fallback
         let fuzzyId=null;
         if(!isAutoMatched){
@@ -539,14 +587,17 @@ export default function App({ initialData, onDataChange, theme }){
     });
     // Categorise (with validation against current category IDs)
     const validIds=new Set(ALL_CATS.map(c=>c.id));
+    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
+    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     // Clean stale catMap entries before using
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const catGroups={};// catId -> [txns]
     extTxns.forEach(t=>{
-      let catId=autoCateg(t,newCm,t._file);
+      let catId=autoCateg(t,newCm,t._file,validIds,fbs);
       // Validate: if returned ID doesn't exist in current categories, fall back
-      if(!validIds.has(catId))catId=t.amt>0?"io":"po";
+      if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
       if(!catGroups[catId])catGroups[catId]=[];
       catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,
         code:t.code,acctId:t.acctId,_file:t._file});
@@ -579,11 +630,14 @@ export default function App({ initialData, onDataChange, theme }){
     setComp(p=>({...p,[wi]:true}));
     if(impCurWk<impWkList.length-1)setImpCurWk(impCurWk+1);
     else{setImpStep("done");setConfetti(true)}
-  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS]);
+  },[curImpWi,impWeeks,impCurWk,impWkList,catMap,autoCateg,accts,ALL_CATS,INC,ECAT]);
 
   // Apply all remaining weeks at once
   const applyAllWeeks=useCallback(()=>{
     const validIds=new Set(ALL_CATS.map(c=>c.id));
+    const fbIncId=INC.length>0?INC[INC.length-1].id:"io";
+    const fbExpId=(()=>{const items=ECAT.flatMap(g=>g.items);return items.length>0?items[items.length-1].id:"po"})();
+    const fbs={inc:fbIncId,exp:fbExpId};
     const newCm={...catMap};
     Object.keys(newCm).forEach(k=>{if(!validIds.has(newCm[k]))delete newCm[k]});
     const allCatTxns={};const allComp={};
@@ -605,8 +659,8 @@ export default function App({ initialData, onDataChange, theme }){
       });
       const catGroups={};
       extTxns.forEach(t=>{
-        let catId=autoCateg(t,newCm,t._file);
-        if(!validIds.has(catId))catId=t.amt>0?"io":"po";
+        let catId=autoCateg(t,newCm,t._file,validIds,fbs);
+        if(!validIds.has(catId))catId=t.amt>0?fbIncId:fbExpId;
         if(!catGroups[catId])catGroups[catId]=[];
         catGroups[catId].push({date:t.date,amt:t.amt,payee:t.payee,particulars:t.particulars,code:t.code,acctId:t.acctId,_file:t._file});
         const pk=(t.payee||"").toUpperCase().trim();
@@ -650,7 +704,7 @@ export default function App({ initialData, onDataChange, theme }){
     });
     setComp(p=>({...p,...allComp}));
     setImpStep("done");setConfetti(true);
-  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS]);
+  },[impWeeks,impWkList,impCurWk,catMap,autoCateg,ALL_CATS,INC,ECAT]);
 
   // ─── Recategorise txn ───
   const reCatTxn=useCallback((wi,fromId,txnIdx,toId)=>{
@@ -752,6 +806,11 @@ export default function App({ initialData, onDataChange, theme }){
       scrollRef.current.scrollLeft=Math.max(0,(curWi-2)*colW);
     }
   },[tab,curWi]);
+
+  // Scroll to top when opening a debt detail view
+  useEffect(()=>{
+    if(debtView!=null) window.scrollTo(0,0);
+  },[debtView]);
 
   // ─── Grid ───
   const wis=Array.from({length:NW},(_,i)=>i);
@@ -931,12 +990,18 @@ export default function App({ initialData, onDataChange, theme }){
   },[debts,catData,budgets,W,freqToWeekly,interestDueInWeek]);
 
   // ─── Snowball allocation engine ───
+  // debtBudget.amt is the EXTRA snowball amount on top of minimums.
+  // Minimums are automatically included for all active debts.
+  // When a debt is paid off, its minimum rolls forward as additional snowball.
   const snowballPlan=useMemo(()=>{
-    const totalWk=debtBudget.amt?freqToWeekly(debtBudget.amt,debtBudget.freq||"w"):0;
-    if(totalWk<=0||debts.length===0)return{active:false,totalWeekly:0,allocations:{},schedule:[],totalMonths:null,debtFreeDate:null};
+    const extraWk=debtBudget.amt?freqToWeekly(debtBudget.amt,debtBudget.freq||"w"):0;
+    if(extraWk<=0||debts.length===0)return{active:false,totalWeekly:0,extraWeekly:0,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:null,debtFreeDate:null};
     const active=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
-    if(active.length===0)return{active:true,totalWeekly:totalWk,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
-    // Current week allocation: minimums (weekly equivalent) first, extra to smallest
+    if(active.length===0)return{active:true,totalWeekly:extraWk,extraWeekly:extraWk,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
+    // Auto-include minimums for all active debts
+    const totalMinWk=active.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
+    const totalWk=extraWk+totalMinWk;
+    // Current week allocation: minimums first, extra to smallest
     const alloc={};
     let rem=totalWk;
     active.forEach(d=>{
@@ -951,7 +1016,8 @@ export default function App({ initialData, onDataChange, theme }){
       rem=0;
     }
     // Full snowball projection: simulate week by week with date-aware interest & minimums
-    const MAX_WK=520;// 10 years
+    // totalWk stays constant; as debts are paid off their minimums free up for remaining debts
+    const MAX_WK=1560;// 30 years (handles mortgages)
     const bals={};active.forEach(d=>{bals[d.id]=d.currentBalance});
     const rates={};active.forEach(d=>{rates[d.id]=(d.interestRate||0)/intPeriods(d.interestFreq||"m")/100});
     const schedule=[];// {debtId, debtName, payoffWeek, payoffDate}
@@ -1001,7 +1067,7 @@ export default function App({ initialData, onDataChange, theme }){
     const totalWeeks=lastPayoff?lastPayoff.payoffWeek:null;
     const allPaidOff=active.every(d=>bals[d.id]<=0);
     return{
-      active:true,totalWeekly:totalWk,allocations:alloc,schedule,
+      active:true,totalWeekly:totalWk,extraWeekly:extraWk,totalMinWeekly:totalMinWk,allocations:alloc,schedule,
       totalMonths:totalWeeks!=null?Math.ceil(totalWeeks*7/30):null,
       totalWeeks,
       debtFreeDate:allPaidOff&&lastPayoff?lastPayoff.payoffDate:null,
@@ -1074,7 +1140,7 @@ export default function App({ initialData, onDataChange, theme }){
     const now=new Date();
     let curWi=0;
     for(let i=0;i<W.length;i++){const sun=W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){curWi=i;break}if(now<mon){curWi=Math.max(0,i-1);break}if(i===W.length-1)curWi=i}
-    const MAX_PROJ=520;
+    const MAX_PROJ=1560;// 30 years (matches snowball schedule)
     return debts.reduce((acc,debt)=>{
       const balDate=new Date(debt.balanceDate);
       let startWi=0;
@@ -2398,7 +2464,7 @@ export default function App({ initialData, onDataChange, theme }){
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:12,flexWrap:"wrap",gap:4}}>
                   <div style={{fontSize:12,fontWeight:700}}>Payoff Forecast</div>
                   {traj.projPayoffDate&&<div style={{fontSize:10,fontWeight:600,color:P.pos}}>Debt-free: {traj.projPayoffDate.toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"})}</div>}
-                  {!traj.projPayoffDate&&di.currentBalance>0&&di.weeklyPayment>0&&<div style={{fontSize:10,color:P.neg,fontWeight:600}}>Not paid off within 10 years</div>}
+                  {(()=>{const over10=!traj.projPayoffDate||(traj.projPayoffDate&&(traj.projPayoffDate-new Date())>10*365.25*24*60*60*1000);return over10&&di.currentBalance>0&&di.weeklyPayment>0?<div style={{fontSize:10,color:P.neg,fontWeight:600}}>Not paid off within 10 years</div>:null})()}
                 </div>
                 <div style={{position:"relative"}}>
                   <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}}
@@ -2564,32 +2630,32 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:P.tx}}>Snowball Budget</div>
-                <div style={{fontSize:9,color:P.txD}}>Set your total debt repayment budget — minimums first, then extra to smallest balance</div>
+                <div style={{fontSize:9,color:P.txD}}>Minimums are automatic — set your extra snowball amount to accelerate payoff</div>
               </div>
-              <button onClick={()=>setSnowballSettingsOpen(true)}
+              <button onClick={openSnowballSettings}
                 style={{background:P.w04,border:"1px solid "+P.bd,borderRadius:8,padding:"8px 14px",color:P.txD,fontSize:10,cursor:"pointer",fontWeight:600,minHeight:36}}>Configure</button>
             </div>
             {!snowballPlan.active?
               <div style={{padding:14,background:P.w02,borderRadius:10,textAlign:"center"}}>
-                <div style={{fontSize:11,color:P.txD,marginBottom:8}}>Set a total weekly/fortnightly/monthly debt repayment amount to enable automatic snowball allocation</div>
-                <button onClick={()=>setSnowballSettingsOpen(true)}
+                <div style={{fontSize:11,color:P.txD,marginBottom:8}}>Minimum payments are applied automatically. Add an extra snowball amount to accelerate your debt payoff.</div>
+                <button onClick={openSnowballSettings}
                   style={{padding:"8px 20px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:36}}>Set Snowball Budget</button>
               </div>
             :<div>
               {/* Budget summary */}
               <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
                 {[
-                  {l:"Total Budget",v:fm(debtBudget.amt)+"/"+(debtBudget.freq==="w"?"wk":debtBudget.freq==="f"?"fn":debtBudget.freq==="m"?"mo":"qtr"),c:P.tx},
-                  {l:"Weekly Equivalent",v:fm(snowballPlan.totalWeekly)+"/wk",c:P.tx},
+                  {l:"Extra Snowball",v:fm(debtBudget.amt)+"/"+(debtBudget.freq==="w"?"wk":debtBudget.freq==="f"?"fn":debtBudget.freq==="m"?"mo":"qtr"),c:P.ac},
+                  {l:"Minimums (auto)",v:fm(snowballPlan.totalMinWeekly)+"/wk",c:P.txD},
+                  {l:"Total Weekly",v:fm(snowballPlan.totalWeekly)+"/wk",c:P.tx},
                   {l:"Debt-Free Date",v:snowballPlan.debtFreeDate?snowballPlan.debtFreeDate.toLocaleDateString("en-NZ",{month:"short",year:"numeric"}):(snowballPlan.notPayable?"Never":"—"),c:snowballPlan.debtFreeDate?P.pos:(snowballPlan.notPayable?P.neg:P.txM)},
-                  {l:"Months to Go",v:snowballPlan.totalMonths!=null?snowballPlan.totalMonths:(snowballPlan.notPayable?"∞":"—"),c:P.tx},
                 ].map(s=><div key={s.l} style={{flex:"1 1 100px",background:P.w03,borderRadius:8,padding:"8px 10px",textAlign:"center"}}>
                   <div style={{fontSize:8,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{s.l}</div>
                   <div style={{fontSize:14,fontWeight:700,color:s.c,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{s.v}</div>
                 </div>)}
               </div>
               {snowballPlan.notPayable&&<div style={{background:P.negL,borderRadius:8,padding:"8px 12px",marginBottom:12,fontSize:10,color:P.neg,fontWeight:500}}>
-                Your budget doesn't cover the minimum payments + interest. Increase your debt budget to make progress.
+                Interest is outpacing payments even with minimums. Consider increasing your extra snowball amount.
               </div>}
               {/* Current week allocation */}
               {activeDebts.length>0&&<div>
@@ -2634,6 +2700,95 @@ export default function App({ initialData, onDataChange, theme }){
               </div>}
             </div>}
           </div>}
+
+          {/* Combined Total Debt Payoff Chart */}
+          {activeDebts.length>0&&(()=>{
+            const debtAtWi=(debtId,wi)=>{
+              const traj=debtTrajectories[debtId];
+              if(!traj||!traj.points.length)return null;
+              if(traj.projPayoffWi!=null&&wi>=traj.projPayoffWi)return 0;
+              let last=null;
+              for(const p of traj.points){if(p.wi<=wi)last=p;else break}
+              return last?last.bal:null;
+            };
+            const trajData=activeDebts.map(d=>({id:d.id,name:d.name,type:d.type,color:DEBT_TYPE_COLORS[d.type]||DEBT_TYPE_COLORS.other,traj:debtTrajectories[d.id]})).filter(d=>d.traj&&d.traj.points.length>=2);
+            if(trajData.length===0)return null;
+            const wiSet=new Set();
+            trajData.forEach(d=>d.traj.points.forEach(p=>wiSet.add(p.wi)));
+            const allWis=[...wiSet].sort((a,b)=>a-b);
+            if(allWis.length<2)return null;
+            let maxActualWi=-1;
+            trajData.forEach(d=>{d.traj.points.forEach(p=>{if(p.isActual&&p.wi>maxActualWi)maxActualWi=p.wi})});
+            const pts=allWis.map(wi=>{
+              let total=0;
+              trajData.forEach(d=>{const b=debtAtWi(d.id,wi);if(b!=null)total+=b});
+              const sun=wi<W.length?W[wi]:new Date(W[W.length-1].getTime()+(wi-W.length+1)*7*864e5);
+              return{wi,bal:Math.round(total*100)/100,date:new Date(sun),isActual:wi<=maxActualWi};
+            });
+            let dPts=pts;
+            if(pts.length>200){const step=Math.ceil(pts.length/200);const laI=pts.reduce((a,p,i)=>p.isActual?i:a,-1);
+              dPts=pts.filter((_,i)=>i===0||i===pts.length-1||i===laI||i===laI+1||i%step===0)}
+            const vals=dPts.map(p=>p.bal);const maxV=Math.max(...vals);const minV=0;const range=maxV-minV||1;
+            const svgW=600,svgH=180,padX=0,padY=14;
+            const getX=i=>padX+i*(svgW-2*padX)/(dPts.length-1||1);
+            const getY=v=>padY+(1-(v-minV)/range)*(svgH-2*padY);
+            const lastActIdx=dPts.reduce((a,p,i)=>p.isActual?i:a,-1);
+            const actPts=dPts.slice(0,lastActIdx+1);const fcPts=lastActIdx>=0?dPts.slice(lastActIdx):dPts;
+            const bp=sub=>sub.map((p,i)=>{const idx=dPts.indexOf(p);return(i===0?"M":"L")+getX(idx).toFixed(1)+","+getY(p.bal).toFixed(1)}).join(" ");
+            const actPath=actPts.length>1?bp(actPts):"";const fcPath=fcPts.length>1?bp(fcPts):"";
+            const zeroY=getY(0);
+            const areaPath=dPts.length>1?bp(dPts)+"L"+getX(dPts.length-1).toFixed(1)+","+svgH+"L"+getX(0).toFixed(1)+","+svgH+"Z":"";
+            const debtLines=trajData.length<=6?trajData.map(d=>{
+              const dPtsForDebt=dPts.map(cp=>{const b=debtAtWi(d.id,cp.wi);return{bal:b!=null?b:0}});
+              const path=dPtsForDebt.map((p,i)=>(i===0?"M":"L")+getX(i).toFixed(1)+","+getY(p.bal).toFixed(1)).join(" ");
+              return{id:d.id,name:d.name,color:d.color,path};
+            }):[];
+            const debtFreeDate=snowballPlan.debtFreeDate;
+            const lastPt=dPts[dPts.length-1];
+            const debtFreeIdx=lastPt&&lastPt.bal<=0?dPts.length-1:null;
+            return <div style={{background:P.card,borderRadius:16,padding:20,border:"1px solid "+P.bd}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10,flexWrap:"wrap",gap:4}}>
+                <div style={{fontSize:13,fontWeight:700}}>Total Debt Payoff</div>
+                {debtFreeDate&&<div style={{fontSize:10,fontWeight:600,color:P.pos}}>Debt-free: {debtFreeDate.toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"})}</div>}
+              </div>
+              <div style={{position:"relative"}}>
+                <svg viewBox={"0 0 "+svgW+" "+svgH} style={{width:"100%",display:"block"}}
+                  onMouseLeave={()=>setHoverDebtPt(null)}
+                  onMouseMove={e=>{const rect=e.currentTarget.getBoundingClientRect();const x=(e.clientX-rect.left)/rect.width*svgW;const idx=Math.round((x-padX)/((svgW-2*padX)/(dPts.length-1||1)));setHoverDebtPt(Math.max(0,Math.min(dPts.length-1,idx)))}}>
+                  <defs><linearGradient id="combDebtGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={P.neg} stopOpacity="0.15"/><stop offset="100%" stopColor={P.neg} stopOpacity="0.02"/></linearGradient></defs>
+                  {areaPath&&<path d={areaPath} fill="url(#combDebtGrad)"/>}
+                  <line x1={padX} y1={zeroY} x2={svgW-padX} y2={zeroY} stroke={P.pos} strokeWidth="0.5" strokeDasharray="4 3" opacity="0.4"/>
+                  {debtLines.map(dl=><path key={dl.id} d={dl.path} fill="none" stroke={dl.color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>)}
+                  {actPath&&<path d={actPath} fill="none" stroke={P.neg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>}
+                  {fcPath&&<path d={fcPath} fill="none" stroke={P.neg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="6 4" opacity="0.45"/>}
+                  {debtFreeIdx!=null&&<circle cx={getX(debtFreeIdx)} cy={getY(0)} r="5" fill={P.pos} stroke="#fff" strokeWidth="1.5"/>}
+                  {hoverDebtPt!=null&&hoverDebtPt>=0&&hoverDebtPt<dPts.length&&<circle cx={getX(hoverDebtPt)} cy={getY(dPts[hoverDebtPt].bal)} r="5" fill={P.neg} opacity="0.9" style={{transition:"cx .1s,cy .1s"}}/>}
+                </svg>
+                {hoverDebtPt!=null&&hoverDebtPt>=0&&hoverDebtPt<dPts.length&&(()=>{const p=dPts[hoverDebtPt];const xPct=getX(hoverDebtPt)/svgW*100;
+                  const breakdown=trajData.map(d=>{const b=debtAtWi(d.id,p.wi);return{name:d.name,bal:b!=null?b:0,color:d.color}}).filter(d=>d.bal>0).sort((a,b)=>b.bal-a.bal);
+                  return <div style={{position:"absolute",top:-8,left:xPct+"%",transform:"translateX(-50%)",
+                    background:P.card,border:"1px solid "+P.bd,color:P.tx,padding:"6px 12px",borderRadius:8,fontSize:10,fontWeight:600,
+                    fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",whiteSpace:"nowrap",pointerEvents:"none",zIndex:5,maxWidth:200}}>
+                    <div style={{marginBottom:breakdown.length>0?4:0}}>{fd(new Date(p.date.getTime()-6*864e5))}: {fm(p.bal)}{!p.isActual?" (projected)":""}</div>
+                    {breakdown.map(d=><div key={d.name} style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:9,fontWeight:500,color:P.txD}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:3}}><span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:d.color,flexShrink:0}}/>{d.name}</span>
+                      <span style={{color:P.tx}}>{fm(d.bal)}</span>
+                    </div>)}
+                  </div>;
+                })()}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                <span style={{fontSize:8,color:P.txM}}>{dPts[0].date.toLocaleString("en-NZ",{month:"short"})+" "+String(dPts[0].date.getFullYear()).slice(2)}</span>
+                <span style={{fontSize:8,color:P.txM}}>{dPts[dPts.length-1].date.toLocaleString("en-NZ",{month:"short"})+" "+String(dPts[dPts.length-1].date.getFullYear()).slice(2)}</span>
+              </div>
+              <div style={{display:"flex",gap:12,marginTop:6,fontSize:9,color:P.txD,flexWrap:"wrap"}}>
+                <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.neg} strokeWidth="2.5" opacity="0.85"/></svg>Actual</span>
+                {fcPts.length>1&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={P.neg} strokeWidth="2" strokeDasharray="4 3" opacity="0.45"/></svg>Projected</span>}
+                {debtFreeIdx!=null&&<span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill={P.pos} stroke="#fff" strokeWidth="1"/></svg>Debt-free</span>}
+                {debtLines.map(dl=><span key={dl.id} style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke={dl.color} strokeWidth="1.2" opacity="0.6"/></svg>{trajData.find(d=>d.id===dl.id)?.name}</span>)}
+              </div>
+            </div>;
+          })()}
 
           {/* Empty state */}
           {debts.length===0&&<div style={{background:P.card,borderRadius:16,padding:36,textAlign:"center",border:"1px solid "+P.bd}}>
@@ -2739,18 +2894,7 @@ export default function App({ initialData, onDataChange, theme }){
       {debtModal!=null&&(()=>{
         const isEdit=debtModal!=="add";
         const existing=isEdit?debtModal:null;
-        const ModalInner=()=>{
-          const[dName,setDName]=useState(existing?.name||"");
-          const[dType,setDType]=useState(existing?.type||"credit_card");
-          const[dRate,setDRate]=useState(existing?.interestRate!=null?String(existing.interestRate):"");
-          const[dIntDay,setDIntDay]=useState(existing?.interestDay!=null?String(existing.interestDay):"1");
-          const[dIntFreq,setDIntFreq]=useState(existing?.interestFreq||existing?.minPaymentFreq||"m");
-          const[dBal,setDBal]=useState(existing?.balance!=null?String(existing.balance):"");
-          const[dDate,setDDate]=useState(existing?.balanceDate||new Date().toISOString().slice(0,10));
-          const[dMin,setDMin]=useState(existing?.minimumPayment!=null?String(existing.minimumPayment):"");
-          const[dMinFreq,setDMinFreq]=useState(existing?.minPaymentFreq||"m");
-          const[dMinDay,setDMinDay]=useState(existing?.minPaymentDay!=null?String(existing.minPaymentDay):"1");
-          const save=()=>{
+        const save=()=>{
             if(!dName.trim()||!dBal)return;
             const trimName=dName.trim();
             let catId=existing?.linkedCatId||null;
@@ -2790,7 +2934,9 @@ export default function App({ initialData, onDataChange, theme }){
           };
           const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
           const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
-          return <div>
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtModal(null)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
+            <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
               <div style={{fontSize:16,fontWeight:700}}>{isEdit?"Edit Debt":"Add Debt"}</div>
               <button onClick={()=>setDebtModal(null)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
@@ -2840,11 +2986,7 @@ export default function App({ initialData, onDataChange, theme }){
               <button onClick={()=>setDebtModal(null)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
               <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>{isEdit?"Save Changes":"Add Debt"}</button>
             </div>
-          </div>;
-        };
-        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setDebtModal(null)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
-            <ModalInner/>
+            </div>
           </div>
         </div>;
       })()}
@@ -2933,34 +3075,32 @@ export default function App({ initialData, onDataChange, theme }){
 
       {/* ═══ SNOWBALL SETTINGS MODAL ═══ */}
       {snowballSettingsOpen&&(()=>{
-        const SnowInner=()=>{
-          const[sAmt,setSAmt]=useState(debtBudget.amt?String(debtBudget.amt):"");
-          const[sFreq,setSFreq]=useState(debtBudget.freq||"w");
-          const[sDay,setSDay]=useState(debtBudget.day||1);
-          const save=()=>{
-            const amt=parseFloat(sAmt)||0;
-            setDebtBudget({amt,freq:sFreq,...(sFreq==="m"&&{day:sDay})});
-            setSnowballSettingsOpen(false);
-          };
-          const clear=()=>{setDebtBudget({amt:0,freq:"w"});setSnowballSettingsOpen(false)};
-          const previewWk=sAmt?freqToWeekly(parseFloat(sAmt)||0,sFreq):0;
-          const activeDebtsPreview=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
-          const totalMin=activeDebtsPreview.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
-          const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
-          const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
-          return <div>
+        const previewWk=sAmt?freqToWeekly(parseFloat(sAmt)||0,sFreq):0;
+        const activeDebtsPreview=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
+        const totalMin=activeDebtsPreview.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
+        const totalPreviewWk=previewWk+totalMin;
+        const snowSave=()=>{
+          const amt=parseFloat(sAmt)||0;
+          setDebtBudget({amt,freq:sFreq,...(sFreq==="m"&&{day:sDay})});
+          setSnowballSettingsOpen(false);
+        };
+        const snowClear=()=>{setDebtBudget({amt:0,freq:"w"});setSnowballSettingsOpen(false)};
+        const inputStyle={width:"100%",padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,background:P.bg,color:P.tx,minHeight:44,boxSizing:"border-box"};
+        const labelStyle={fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:3,display:"block"};
+        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSnowballSettingsOpen(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{fontSize:16,fontWeight:700}}>Snowball Budget</div>
+              <div style={{fontSize:16,fontWeight:700}}>Extra Snowball Amount</div>
               <button onClick={()=>setSnowballSettingsOpen(false)} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:P.txM}}>✕</button>
             </div>
             <div style={{fontSize:11,color:P.txD,marginBottom:14,lineHeight:1.5}}>
-              Set your total debt repayment budget. The snowball engine will automatically allocate minimum payments to all debts,
-              then direct any remaining amount to your smallest balance first.
+              Minimum payments are automatically allocated to all debts. Set your extra snowball amount here —
+              it goes straight to your smallest balance first. As debts are paid off, their minimums roll forward to accelerate the next one.
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:12}}>
               <div style={{display:"flex",gap:10}}>
-                <div style={{flex:1}}><label style={labelStyle}>Total Amount ($)</label>
-                  <input type="number" step="0.01" min="0" value={sAmt} onChange={e=>setSAmt(e.target.value)} placeholder="e.g. 200" style={inputStyle} autoFocus/></div>
+                <div style={{flex:1}}><label style={labelStyle}>Extra Amount ($)</label>
+                  <input type="number" step="0.01" min="0" value={sAmt} onChange={e=>setSAmt(e.target.value)} placeholder="e.g. 100" style={inputStyle} autoFocus/></div>
                 <div style={{flex:1}}><label style={labelStyle}>Frequency</label>
                   <select value={sFreq} onChange={e=>setSFreq(e.target.value)} style={inputStyle}>
                     <option value="w">Weekly</option><option value="f">Fortnightly</option>
@@ -2975,27 +3115,24 @@ export default function App({ initialData, onDataChange, theme }){
                   </select></div>
                 <div style={{flex:1}}/>
               </div>}
-              {previewWk>0&&<div style={{background:P.w03,borderRadius:10,padding:12}}>
-                <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:6}}>Preview</div>
+              <div style={{background:P.w03,borderRadius:10,padding:12}}>
+                <div style={{fontSize:10,fontWeight:600,color:P.tx,marginBottom:6}}>Budget Breakdown</div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                  <span style={{color:P.txD}}>Weekly equivalent</span>
-                  <span style={{fontWeight:600,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(previewWk)}/wk</span>
+                  <span style={{color:P.txD}}>Minimums (automatic)</span>
+                  <span style={{fontWeight:600,color:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalMin)}/wk</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
-                  <span style={{color:P.txD}}>Total minimums needed</span>
-                  <span style={{fontWeight:600,color:totalMin>previewWk?P.neg:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalMin)}/wk</span>
+                  <span style={{color:P.txD}}>Extra snowball</span>
+                  <span style={{fontWeight:600,color:previewWk>0?P.ac:P.txD,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(previewWk)}/wk</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:10}}>
-                  <span style={{color:P.txD}}>Extra for snowball</span>
-                  <span style={{fontWeight:600,color:previewWk-totalMin>0?P.ac:P.neg,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(Math.max(0,previewWk-totalMin))}/wk</span>
+                <div style={{borderTop:"1px solid "+P.bd,paddingTop:4,marginTop:2,display:"flex",justifyContent:"space-between",fontSize:10}}>
+                  <span style={{fontWeight:600,color:P.tx}}>Total weekly repayment</span>
+                  <span style={{fontWeight:700,color:P.tx,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{fm(totalPreviewWk)}/wk</span>
                 </div>
-                {previewWk<totalMin&&<div style={{fontSize:9,color:P.neg,marginTop:6,fontWeight:500}}>
-                  Budget doesn't cover all minimum payments. Consider increasing to at least {fm(totalMin)}/wk.
+                {activeDebtsPreview.length>0&&previewWk>0&&<div style={{fontSize:9,color:P.ac,marginTop:6,fontWeight:500}}>
+                  Extra {fm(previewWk)}/wk goes to {activeDebtsPreview[0].name} (smallest balance)
                 </div>}
-                {activeDebtsPreview.length>0&&previewWk>=totalMin&&<div style={{fontSize:9,color:P.ac,marginTop:6,fontWeight:500}}>
-                  Extra {fm(previewWk-totalMin)}/wk goes to {activeDebtsPreview[0].name} (smallest balance)
-                </div>}
-              </div>}
+              </div>
               {activeDebtsPreview.length>0&&<div>
                 <div style={{fontSize:9,fontWeight:600,color:P.txM,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Your Debts (smallest first)</div>
                 <div style={{borderRadius:8,border:"1px solid "+P.bd,overflow:"hidden"}}>
@@ -3005,23 +3142,18 @@ export default function App({ initialData, onDataChange, theme }){
                       <div style={{fontWeight:500,color:P.tx}}>{d.name}</div>
                       <div style={{fontSize:8,color:P.txD}}>{fm(d.currentBalance)}{d.minimumPayment?" · min $"+d.minimumPayment+"/"+({w:"wk",f:"fn",m:"mo"}[d.minPaymentFreq]||"mo"):""}</div>
                     </div>
-                    {i===0&&previewWk>totalMin&&<span style={{fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 6px",borderRadius:6}}>FOCUS</span>}
+                    {i===0&&previewWk>0&&<span style={{fontSize:8,fontWeight:700,color:P.ac,background:P.acL,padding:"2px 6px",borderRadius:6}}>FOCUS</span>}
                   </div>)}
                 </div>
               </div>}
             </div>
             <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:18}}>
-              <button onClick={clear} style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear Budget</button>
+              <button onClick={snowClear} style={{padding:"8px 14px",borderRadius:8,border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,fontSize:11,cursor:"pointer",minHeight:44}}>Clear Budget</button>
               <div style={{display:"flex",gap:8}}>
                 <button onClick={()=>setSnowballSettingsOpen(false)} style={{padding:"8px 18px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
-                <button onClick={save} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
+                <button onClick={snowSave} style={{padding:"8px 24px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
               </div>
             </div>
-          </div>;
-        };
-        return <div style={{position:"fixed",inset:0,minHeight:"100dvh",background:P.overlayBg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setSnowballSettingsOpen(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{background:P.card,borderRadius:16,padding:20,maxWidth:500,width:"92%",maxHeight:"85vh",overflow:"auto",border:"1px solid "+P.bd}}>
-            <SnowInner/>
           </div>
         </div>;
       })()}
@@ -3039,7 +3171,7 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{fontSize:12,fontWeight:700,color:P.pos,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Income</div>
             {INC.map((cat,i)=><div key={cat.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
               <input value={cat.n} onChange={e=>{const v=e.target.value;setINC(p=>p.map((c,j)=>j===i?{...c,n:v}:c))}}
-                style={{flex:1,fontSize:11,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
+                style={{flex:1,fontSize:16,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
               <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{cat.id}</span>
               <button onClick={()=>{cleanupDeletedCat(cat.id);setINC(p=>p.filter((_,j)=>j!==i))}}
                 style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>
@@ -3053,18 +3185,18 @@ export default function App({ initialData, onDataChange, theme }){
             <div style={{fontSize:12,fontWeight:700,color:P.neg,marginBottom:8,textTransform:"uppercase",letterSpacing:".04em"}}>Expenses</div>
             {ECAT.map((grp,gi)=>{const visItems=grp.items.filter(it=>!debtLinkedIds.has(it.id));
             if(visItems.length===0&&grp.items.length>0&&grp.items.every(it=>debtLinkedIds.has(it.id)))return null;
-            return <div key={grp.n+gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
+            return <div key={gi} style={{marginBottom:12,background:P.w02,borderRadius:10,padding:10,border:"1px solid "+P.bdL}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                 <input type="color" value={grp.c} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,c:v}:g))}}
                   style={{width:24,height:24,border:"none",borderRadius:4,cursor:"pointer",padding:0}}/>
                 <input value={grp.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,n:v}:g))}}
-                  style={{flex:1,fontSize:12,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
+                  style={{flex:1,fontSize:16,fontWeight:600,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
                 <button onClick={()=>{grp.items.forEach(it=>cleanupDeletedCat(it.id));setECAT(p=>p.filter((_,j)=>j!==gi))}}
                   style={{background:"none",border:"none",fontSize:13,cursor:"pointer",color:P.neg,padding:"2px 4px"}} title="Remove category">✕</button>
               </div>
               {visItems.map(it=>{const ii=grp.items.findIndex(x=>x.id===it.id);return <div key={it.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3,marginLeft:16}}>
                 <input value={it.n} onChange={e=>{const v=e.target.value;setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.map((t,k)=>k===ii?{...t,n:v}:t)}:g))}}
-                  style={{flex:1,fontSize:10,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx}}/>
+                  style={{flex:1,fontSize:16,padding:"6px 10px",border:"1px solid "+P.bd,borderRadius:8,background:P.card,color:P.tx,minHeight:44}}/>
                 <span style={{fontSize:8,color:P.txM,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>{it.id}</span>
                 <button onClick={()=>{cleanupDeletedCat(it.id);setECAT(p=>p.map((g,j)=>j===gi?{...g,items:g.items.filter((_,k)=>k!==ii)}:g))}}
                   style={{background:"none",border:"none",fontSize:12,cursor:"pointer",color:P.neg,padding:"2px 4px"}}>✕</button>

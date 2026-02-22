@@ -176,34 +176,31 @@ export default function AppWrapper() {
   }, [startSubscription]);
 
   // ─── Debounced save to shared household ───
+  const pendingSave = useRef(null);
   const onDataChange = useCallback((data) => {
     if (!householdId || !latestUid.current) return;
     pendingData.current = data;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    pendingSave.current = { householdId, uid: latestUid.current, data };
     saveTimer.current = setTimeout(() => {
-      pendingData.current = null;
+      pendingSave.current = null;
       saveSharedData(householdId, latestUid.current, data);
     }, 2000);
   }, [householdId]);
 
-  // ─── Flush pending save on page unload / tab hide ───
+  // Flush pending save on page unload to prevent data loss
   useEffect(() => {
-    const flushPendingSave = () => {
-      if (pendingData.current && householdId && latestUid.current) {
-        if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
-        saveSharedData(householdId, latestUid.current, pendingData.current);
-        pendingData.current = null;
+    const flush = () => {
+      if (pendingSave.current) {
+        const { householdId: hid, uid, data } = pendingSave.current;
+        pendingSave.current = null;
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveSharedData(hid, uid, data);
       }
     };
-    const handleBeforeUnload = () => flushPendingSave();
-    const handleVisibilityChange = () => { if (document.visibilityState === "hidden") flushPendingSave(); };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [householdId]);
+    window.addEventListener("beforeunload", flush);
+    return () => window.removeEventListener("beforeunload", flush);
+  }, []);
 
   // ─── Theme change handler ───
   const changeTheme = async (newTheme) => {
