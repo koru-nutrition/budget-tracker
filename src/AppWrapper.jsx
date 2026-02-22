@@ -88,6 +88,7 @@ export default function AppWrapper() {
   const [loaded, setLoaded] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
   const saveTimer = useRef(null);
+  const pendingData = useRef(null);
   const unsubData = useRef(null);
   const latestUid = useRef(null);
 
@@ -178,6 +179,7 @@ export default function AppWrapper() {
   const pendingSave = useRef(null);
   const onDataChange = useCallback((data) => {
     if (!householdId || !latestUid.current) return;
+    pendingData.current = data;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     pendingSave.current = { householdId, uid: latestUid.current, data };
     saveTimer.current = setTimeout(() => {
