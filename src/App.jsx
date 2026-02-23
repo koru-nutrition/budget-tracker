@@ -268,6 +268,7 @@ export default function App({ initialData, onDataChange, theme }){
   const[txnStore,setTxnStore]=useState({});
   const[catData,setCatData]=useState({});
   const[catTxns,setCatTxns]=useState({});
+  const[customTxns,setCustomTxns]=useState({});// {weekIndex: [{id,catId,amt,note,type:'expense'|'income'}]}
   const[catMap,setCatMap]=useState({});
   const[comp,setComp]=useState({});
   const[tab,setTab]=useState("week");
@@ -405,6 +406,7 @@ export default function App({ initialData, onDataChange, theme }){
       const s=typeof initialData==="string"?JSON.parse(initialData):initialData;
       if(s.a)setAccts(s.a);if(s.ad)setAcctData(s.ad);if(s.c)setComp(s.c);
       if(s.t)setTxnStore(s.t);if(s.cd)setCatData(s.cd);if(s.ct)setCatTxns(s.ct);
+      if(s.cxt)setCustomTxns(s.cxt);
       if(s.cm)setCatMap(s.cm);if(s.bu)setBudgets(s.bu);
       if(s.inc)setINC(s.inc);if(s.ecat)setECAT(s.ecat);
       if(s.sw!=null)setStartWeek(s.sw);
@@ -419,9 +421,9 @@ export default function App({ initialData, onDataChange, theme }){
   // ─── Save to Firebase (via props) ───
   useEffect(()=>{
     if(!ready)return;
-    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget,fbi:fallbackInc,fbe:fallbackExp};
+    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cxt:customTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget,fbi:fallbackInc,fbe:fallbackExp};
     if(onDataChange)onDataChange(data);
-  },[accts,acctData,comp,txnStore,catData,catTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget,fallbackInc,fallbackExp]);// eslint-disable-line
+  },[accts,acctData,comp,txnStore,catData,catTxns,customTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget,fallbackInc,fallbackExp]);// eslint-disable-line
 
   // ─── Auto-link: create cashflow categories for any debts missing one ───
   const debtMigrated=useRef(false);
@@ -857,23 +859,31 @@ export default function App({ initialData, onDataChange, theme }){
   const wipeAll=useCallback(()=>{
     setAcctData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=Array(NW).fill(null)});return n});
     setCatData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=Array(NW).fill(null)});return n});
-    setTxnStore({});setCatTxns({});setComp({});setCatMap({});
+    setTxnStore({});setCatTxns({});setCustomTxns({});setComp({});setCatMap({});
   },[]);
   const wipeWeek=useCallback(wi=>{
     setAcctData(p=>{const n={};Object.keys(p).forEach(k=>{n[k]=[...p[k]];n[k][wi]=null});return n});
     setCatData(p=>{const n={};Object.keys(p).forEach(k=>{n[k]=[...p[k]];n[k][wi]=null});return n});
     setTxnStore(p=>{const n={...p};delete n[wi];return n});
     setCatTxns(p=>{const n={...p};delete n[wi];return n});
+    setCustomTxns(p=>{const n={...p};delete n[wi];return n});
     setComp(p=>{const n={...p};delete n[wi];return n});
   },[]);
   // Clean up all data referencing a deleted category item
   const cleanupDeletedCat=useCallback((deletedId)=>{
     setCatData(p=>{const n={...p};delete n[deletedId];return n});
     setCatTxns(p=>{const n={...p};Object.keys(n).forEach(wi=>{if(n[wi]&&n[wi][deletedId]){n[wi]={...n[wi]};delete n[wi][deletedId]}});return n});
+    setCustomTxns(p=>{const n={...p};Object.keys(n).forEach(wi=>{const filtered=n[wi].filter(t=>t.catId!==deletedId);if(filtered.length===0)delete n[wi];else n[wi]=filtered});return n});
     setBudgets(p=>{const n={...p};delete n[deletedId];return n});
     setCatMap(p=>{const n={};Object.entries(p).forEach(([k,v])=>{if(v!==deletedId)n[k]=v});return n});
     setDebts(p=>p.map(d=>d.linkedCatId===deletedId?{...d,linkedCatId:null}:d));
   },[]);
+  const deleteCustomTxn=useCallback((wi,txnId)=>{
+    const txns=customTxns[wi];if(!txns)return;
+    const txn=txns.find(t=>t.id===txnId);if(!txn)return;
+    setCustomTxns(prev=>{const n={...prev};n[wi]=(n[wi]||[]).filter(t=>t.id!==txnId);if(n[wi].length===0)delete n[wi];return n});
+    setCatData(prev=>{const n={...prev};if(!n[txn.catId])return prev;n[txn.catId]=[...n[txn.catId]];const cur=n[txn.catId][wi]||0;n[txn.catId][wi]=Math.round((cur-txn.amt)*100)/100;if(n[txn.catId][wi]<=0)n[txn.catId][wi]=null;return n});
+  },[customTxns]);
   const doComp=useCallback(wi=>{setComp(p=>({...p,[wi]:true}));setConfetti(true)},[]);
   const undoComp=useCallback(wi=>{setComp(p=>{const n={...p};delete n[wi];return n})},[]);
 
@@ -897,12 +907,14 @@ export default function App({ initialData, onDataChange, theme }){
     b[startWeek]=openingBalance;
     let cont=true;
     for(let i=startWeek;i<NW;i++){
-      const has=accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null);
+      const hasAcct=accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null);
+      const hasCust=customTxns[i]&&customTxns[i].length>0;
+      const has=hasAcct||hasCust;
       if(!has)cont=false;
-      if(cont&&has&&b[i]!=null)b[i+1]=Math.round((b[i]+wT[i].net)*100)/100;
+      if(cont&&has&&b[i]!=null)b[i+1]=Math.round((b[i]+wT[i].net+customNet[i])*100)/100;
     }
     return b;
-  },[wT,acctData,accts,startWeek,openingBalance]);
+  },[wT,acctData,accts,startWeek,openingBalance,customTxns,customNet]);
 
   // Category totals per week (for display)
   const catWT=useMemo(()=>W.map((_,wi)=>{
@@ -911,6 +923,18 @@ export default function App({ initialData, onDataChange, theme }){
     ECAT.forEach(cat=>cat.items.forEach(it=>{const v=catData[it.id]&&catData[it.id][wi];if(v!=null)exp+=v}));
     return{inc,exp};
   }),[catData]);
+
+  // Custom transaction net per week (income positive, expense negative)
+  const customNet=useMemo(()=>{
+    const net=Array(NW).fill(0);
+    Object.entries(customTxns).forEach(([wi,txns])=>{
+      txns.forEach(t=>{
+        if(t.type==='income')net[+wi]+=t.amt;
+        else net[+wi]-=t.amt;
+      });
+    });
+    return net;
+  },[customTxns,NW]);
 
   const compCt=Object.keys(comp).length;
   const curWi=W.findIndex((_,i)=>getStat(i)==="u");
@@ -1031,7 +1055,11 @@ export default function App({ initialData, onDataChange, theme }){
     ALL_CATS.forEach(c=>{projCat[c.id]=Array(NW).fill(null)});
     const sw=startWeek!=null?startWeek:0;
     for(let i=sw;i<NW;i++){
-      if(i<=lastActual||comp[i]){fInc[i]=wT[i].inc;fExp[i]=wT[i].exp;continue}
+      if(i<=lastActual||comp[i]){
+        // Include custom transaction amounts alongside account data
+        const custInc=customTxns[i]?customTxns[i].filter(t=>t.type==='income').reduce((s,t)=>s+t.amt,0):0;
+        const custExp=customTxns[i]?customTxns[i].filter(t=>t.type!=='income').reduce((s,t)=>s+t.amt,0):0;
+        fInc[i]=wT[i].inc+custInc;fExp[i]=wT[i].exp+custExp;continue}
       let wInc=0,wExp=0;
       INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
       AEXP.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0});
@@ -1045,7 +1073,7 @@ export default function App({ initialData, onDataChange, theme }){
       }
     }
     return{fInc,fExp,fBal,wkInc:wkIncAvg,wkExp:wkExpAvg,wkNet:wkIncAvg-wkExpAvg,lastActual,projCat};
-  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData]);
+  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData,customTxns]);
 
   // ─── Debt computations ───
   const debtInfos=useMemo(()=>{
@@ -1394,6 +1422,7 @@ export default function App({ initialData, onDataChange, theme }){
   const cdCat=cellDetail?ALL_CATS.find(c=>c.id===cellDetail.id):null;
   const cdIsAcct=cellDetail?!!accts.find(a=>a.id===cellDetail.id):false;
   const cdTxns=cellDetail?(cdIsAcct?(txnStore[cellDetail.wi]&&txnStore[cellDetail.wi][cellDetail.id]||[]):(catTxns[cellDetail.wi]&&catTxns[cellDetail.wi][cellDetail.id]||[])):[];
+  const cdCustomTxns=cellDetail&&!cdIsAcct?(customTxns[cellDetail.wi]||[]).filter(t=>t.catId===cellDetail.id):[];
   const cdVal=cellDetail?(cdIsAcct?(acctData[cellDetail.id]&&acctData[cellDetail.id][cellDetail.wi]):(catData[cellDetail.id]&&catData[cellDetail.id][cellDetail.wi])):null;
   const revMonDate=curImpWi!=null?new Date(W[curImpWi].getTime()-6*864e5):null;
   const revTotalIn=curImpTxns.filter(t=>t.amt>0).reduce((s,t)=>s+t.amt,0);
@@ -1559,7 +1588,9 @@ export default function App({ initialData, onDataChange, theme }){
           // Actual data for this week
           const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
           const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
-          const hasActual=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+          const hasAcctData=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+          const hasCatData=INC.some(c=>catData[c.id]&&catData[c.id][wi]!=null)||ECAT.some(cat=>cat.items.some(it=>catData[it.id]&&catData[it.id][wi]!=null));
+          const hasActual=hasAcctData||hasCatData;
           // Budgeted data for this week
           const budInc=INC.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
           const budExp=AEXP.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
@@ -1594,11 +1625,14 @@ export default function App({ initialData, onDataChange, theme }){
           const addExpense=()=>{
             if(!twAddCat||!twAddAmt)return;
             const amt=parseFloat(twAddAmt);if(isNaN(amt)||amt===0)return;
+            const absAmt=Math.abs(amt);
+            const txn={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),catId:twAddCat,amt:absAmt,note:twAddNote||"",type:"expense"};
+            setCustomTxns(prev=>({...prev,[wi]:[...(prev[wi]||[]),txn]}));
             setCatData(prev=>{
               const n={...prev};
               if(!n[twAddCat])n[twAddCat]=Array(NW).fill(null);
               else n[twAddCat]=[...n[twAddCat]];
-              n[twAddCat][wi]=(n[twAddCat][wi]||0)+Math.abs(amt);
+              n[twAddCat][wi]=(n[twAddCat][wi]||0)+absAmt;
               return n;
             });
             setTwAddCat("");setTwAddAmt("");setTwAddNote("");setTwAddOpen(false);
@@ -1617,11 +1651,14 @@ export default function App({ initialData, onDataChange, theme }){
           const addIncome=()=>{
             if(!twAddIncCat||!twAddIncAmt)return;
             const amt=parseFloat(twAddIncAmt);if(isNaN(amt)||amt===0)return;
+            const absAmt=Math.abs(amt);
+            const txn={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),catId:twAddIncCat,amt:absAmt,note:"",type:"income"};
+            setCustomTxns(prev=>({...prev,[wi]:[...(prev[wi]||[]),txn]}));
             setCatData(prev=>{
               const n={...prev};
               if(!n[twAddIncCat])n[twAddIncCat]=Array(NW).fill(null);
               else n[twAddIncCat]=[...n[twAddIncCat]];
-              n[twAddIncCat][wi]=(n[twAddIncCat][wi]||0)+Math.abs(amt);
+              n[twAddIncCat][wi]=(n[twAddIncCat][wi]||0)+absAmt;
               return n;
             });
             setTwAddIncCat("");setTwAddIncAmt("");setTwAddIncOpen(false);
@@ -1775,6 +1812,9 @@ export default function App({ initialData, onDataChange, theme }){
                         style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.card,color:P.tx,minHeight:44}}/>
                     </div>
                   </div>
+                  <input type="text" placeholder="Note (optional)" value={twAddNote} onChange={e=>setTwAddNote(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")addExpense()}}
+                    style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:36}}/>
                   <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
                     <button onClick={()=>{setTwAddOpen(false);setTwAddCat("");setTwAddAmt("");setTwAddNote("")}}
                       style={{padding:"7px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Cancel</button>
@@ -2401,7 +2441,7 @@ export default function App({ initialData, onDataChange, theme }){
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
-                      {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):wT[wi].net;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp);
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):(wT[wi].net+customNet[wi]);const hasCust=customTxns[wi]&&customTxns[wi].length>0;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp||hasCust);
                         return <td key={wi} style={{...cS,fontWeight:700,color:pre?P.txM:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF&&has?0.65:1}}>{pre?"–":has?fm(n):"–"}</span></td>})}
                     </tr>
@@ -2415,7 +2455,7 @@ export default function App({ initialData, onDataChange, theme }){
                     <tr>
                       <td style={{...stL,padding:"4px 12px",background:P.card,borderBottom:"1px solid "+P.bd}}></td>
                       {fyWis.map(wi=>{
-                        const pre=wi<startWeek;const s=getStat(wi);const done=comp[wi];const has=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
+                        const pre=wi<startWeek;const s=getStat(wi);const done=comp[wi];const hasAcct=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);const hasCustW=customTxns[wi]&&customTxns[wi].length>0;const has=hasAcct||hasCustW;
                         if(pre)return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:P.w02,borderBottom:"1px solid "+P.bd}}/>;
                         return <td key={wi} style={{padding:"4px 4px",textAlign:"center",background:statStyle(s).bg,borderBottom:"1px solid "+P.bd}}>
                           {!done&&has&&<button onClick={()=>wipeWeek(wi)} style={{fontSize:7,padding:"2px 5px",border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,borderRadius:3,cursor:"pointer",marginRight:2}}>Wipe</button>}
@@ -3360,7 +3400,21 @@ export default function App({ initialData, onDataChange, theme }){
               </div>)}
             </div>
           </div>}
-          {cdTxns.length===0&&<div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
+          {cdCustomTxns.length>0&&<div style={{marginTop:cdTxns.length>0?12:0}}>
+            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Custom Entries ({cdCustomTxns.length})</div>
+            <div style={{borderRadius:7,border:"1px solid "+P.bd,overflow:"hidden",maxHeight:250,overflowY:"auto"}}>
+              {cdCustomTxns.map((t,idx)=><div key={t.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",borderBottom:idx<cdCustomTxns.length-1?"1px solid "+P.bdL:"none",fontSize:10}}>
+                <div style={{flex:"0 0 50px",color:P.txM,fontSize:9,fontStyle:"italic"}}>{t.type==="income"?"Income":"Expense"}</div>
+                <div style={{flex:"0 0 70px",textAlign:"right",color:t.type==="income"?P.pos:P.neg,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em"}}>
+                  {(t.type==="income"?"+":"-")+"$"+t.amt.toFixed(2)}
+                </div>
+                <div style={{flex:1,color:P.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.note||"Manual entry"}</div>
+                {!comp[cellDetail.wi]&&<button onClick={()=>{deleteCustomTxn(cellDetail.wi,t.id);if(cdCustomTxns.length===1&&cdTxns.length===0)setCellDetail(null)}}
+                  style={{fontSize:8,padding:"3px 6px",border:"1px solid "+P.neg+"40",background:P.negL,color:P.neg,borderRadius:4,cursor:"pointer",flexShrink:0}}>Delete</button>}
+              </div>)}
+            </div>
+          </div>}
+          {cdTxns.length===0&&cdCustomTxns.length===0&&<div style={{padding:14,background:P.w02,borderRadius:8,fontSize:11,color:P.txD,textAlign:"center"}}>{cdVal!=null?"Manual entry":"No transactions"}</div>}
 
           {/* Info message for debt-linked category cells */}
           {cellDetail.isCat&&!cdIsAcct&&debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12,padding:"10px 14px",background:P.w02,borderRadius:8,fontSize:10,color:P.blue,textAlign:"center"}}>
@@ -3368,22 +3422,23 @@ export default function App({ initialData, onDataChange, theme }){
           </div>}
           {/* Edit controls for non-completed, non-pre-start, non-debt-linked category cells */}
           {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12}}>
-            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Edit Value</div>
+            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Add Custom Entry</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
-              <input type="number" step="0.01" value={eVal} onChange={e=>setEVal(e.target.value)} placeholder={cdVal!=null?String(Math.abs(cdVal)):"0.00"}
-                onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(eVal);if(!isNaN(v)&&v!==0){setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=Math.abs(v);return n});setCellDetail(null)}}}}
+              <input type="number" step="0.01" value={eVal} onChange={e=>setEVal(e.target.value)} placeholder="0.00"
+                onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(eVal);if(!isNaN(v)&&v!==0){
+                  const absV=Math.abs(v);const txnType=INC_IDS.has(cellDetail.id)?"income":"expense";
+                  const txn={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),catId:cellDetail.id,amt:absV,note:"",type:txnType};
+                  setCustomTxns(prev=>({...prev,[cellDetail.wi]:[...(prev[cellDetail.wi]||[]),txn]}));
+                  setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=(n[cellDetail.id][cellDetail.wi]||0)+absV;return n});setCellDetail(null)}}}}
                 style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx,minHeight:44}}/>
-              <button onClick={()=>{const v=parseFloat(eVal);if(isNaN(v))return;setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=v===0?null:Math.abs(v);return n});setCellDetail(null)}}
-                style={{padding:"8px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Save</button>
+              <button onClick={()=>{const v=parseFloat(eVal);if(isNaN(v)||v===0)return;
+                const absV=Math.abs(v);const txnType=INC_IDS.has(cellDetail.id)?"income":"expense";
+                const txn={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),catId:cellDetail.id,amt:absV,note:"",type:txnType};
+                setCustomTxns(prev=>({...prev,[cellDetail.wi]:[...(prev[cellDetail.wi]||[]),txn]}));
+                setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])n[cellDetail.id]=Array(NW).fill(null);else n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=(n[cellDetail.id][cellDetail.wi]||0)+absV;return n});setCellDetail(null)}}
+                style={{padding:"8px 16px",borderRadius:8,border:"none",background:P.acL,color:P.ac,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Add</button>
             </div>
-            {catData[cellDetail.id]&&catData[cellDetail.id][cellDetail.wi]!=null&&(()=>{
-              const budVal=forecast.projCat[cellDetail.id]&&forecast.projCat[cellDetail.id][cellDetail.wi];
-              return <button onClick={()=>{setCatData(prev=>{const n={...prev};if(!n[cellDetail.id])return prev;n[cellDetail.id]=[...n[cellDetail.id]];n[cellDetail.id][cellDetail.wi]=null;return n});setCellDetail(null)}}
-                style={{marginTop:8,width:"100%",padding:"8px 14px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:10,cursor:"pointer",minHeight:36,textAlign:"center"}}>
-                {budVal?"Reset to Budget ("+fm(budVal)+")":"Clear Override"}
-              </button>;
-            })()}
           </div>}
 
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
