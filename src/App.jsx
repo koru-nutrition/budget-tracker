@@ -445,6 +445,28 @@ export default function App({ initialData, onDataChange, theme }){
     setDebts(prev=>prev.map(d=>debtUpdates[d.id]?{...d,linkedCatId:debtUpdates[d.id]}:d));
   },[ready]);// eslint-disable-line
 
+  // ─── Migration: fix negative income values in existing data ───
+  const incMigrated=useRef(false);
+  useEffect(()=>{
+    if(!ready||incMigrated.current)return;
+    incMigrated.current=true;
+    setCatData(prev=>{
+      let changed=false;
+      const n={...prev};
+      INC_IDS.forEach(id=>{
+        if(!n[id])return;
+        const arr=n[id];
+        for(let i=0;i<arr.length;i++){
+          if(arr[i]!=null&&arr[i]<0){
+            if(!changed){changed=true;Object.keys(n).forEach(k=>{n[k]=[...n[k]]})}
+            n[id][i]=Math.abs(arr[i]);
+          }
+        }
+      });
+      return changed?n:prev;
+    });
+  },[ready]);// eslint-disable-line
+
   // ─── Confetti ───
   useEffect(()=>{
     if(!confetti)return;
