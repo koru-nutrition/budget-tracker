@@ -1060,41 +1060,6 @@ export default function App({ initialData, onDataChange, theme }){
     return sun.getMonth()!==prevMo;
   },[dayInWeek]);
 
-  // ─── Forecast + populate future weeks ───
-  const forecast=useMemo(()=>{
-    const fInc=Array(NW).fill(0);
-    const fExp=Array(NW).fill(0);
-    const fBal=[...rB];
-    let wkIncAvg=0,wkExpAvg=0;
-    INC.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkIncAvg+=freqToWeekly(b.amt,b.freq||"w")});
-    AEXP.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkExpAvg+=freqToWeekly(b.amt,b.freq||"w")});
-    let lastActual=-1;
-    for(let i=NW-1;i>=0;i--){if(accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null)){lastActual=i;break}}
-    // Per-week projected category amounts for future
-    const projCat={};// {catId: [NW]}
-    ALL_CATS.forEach(c=>{projCat[c.id]=Array(NW).fill(null)});
-    const sw=startWeek!=null?startWeek:0;
-    for(let i=sw;i<NW;i++){
-      if(i<=lastActual||comp[i]){
-        // Include custom transaction amounts alongside account data
-        const custInc=customTxns[i]?customTxns[i].filter(t=>t.type==='income').reduce((s,t)=>s+t.amt,0):0;
-        const custExp=customTxns[i]?customTxns[i].filter(t=>t.type!=='income').reduce((s,t)=>s+t.amt,0):0;
-        fInc[i]=wT[i].inc+custInc;fExp[i]=wT[i].exp+custExp;continue}
-      let wInc=0,wExp=0;
-      INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i,c.id);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
-      AEXP.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i,c.id);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0});
-      fInc[i]=wInc;fExp[i]=wExp;
-      const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:null);
-      if(prev!=null)fBal[i+1]=Math.round((prev+wInc-wExp)*100)/100;
-    }
-    for(let i=Math.max(1,sw);i<=NW;i++){
-      if(fBal[i]==null&&fBal[i-1]!=null&&i-1>lastActual){
-        fBal[i]=Math.round((fBal[i-1]+fInc[i-1]-fExp[i-1])*100)/100;
-      }
-    }
-    return{fInc,fExp,fBal,wkInc:wkIncAvg,wkExp:wkExpAvg,wkNet:wkIncAvg-wkExpAvg,lastActual,projCat};
-  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData,customTxns]);
-
   // ─── Debt computations ───
   const debtInfos=useMemo(()=>{
     const now=new Date();
@@ -1237,6 +1202,98 @@ export default function App({ initialData, onDataChange, theme }){
       notPayable:!allPaidOff,
     };
   },[debtBudget,debts,debtInfos,freqToWeekly,W,NW,interestDueInWeek,minPaymentDueInWeek]);
+
+  // ─── Forecast + populate future weeks ───
+  const forecast=useMemo(()=>{
+    const fInc=Array(NW).fill(0);
+    const fExp=Array(NW).fill(0);
+    const fBal=[...rB];
+    let wkIncAvg=0,wkExpAvg=0;
+    INC.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkIncAvg+=freqToWeekly(b.amt,b.freq||"w")});
+    AEXP.forEach(c=>{const b=budgets[c.id];if(b&&b.amt)wkExpAvg+=freqToWeekly(b.amt,b.freq||"w")});
+    let lastActual=-1;
+    for(let i=NW-1;i>=0;i--){if(accts.some(a=>acctData[a.id]&&acctData[a.id][i]!=null)){lastActual=i;break}}
+    // Per-week projected category amounts for future
+    const projCat={};// {catId: [NW]}
+    ALL_CATS.forEach(c=>{projCat[c.id]=Array(NW).fill(null)});
+    // ── Snowball-aware per-week allocations for debt-linked categories ──
+    // When snowball is active, simulate week-by-week so that once a debt is
+    // paid off its budget drops to 0 and the freed money rolls to the next debt.
+    const snowWeekAlloc={}; // {catId: {wi: amount}}
+    if(snowballPlan.active){
+      const activeSnowDebts=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.linkedCatId&&d.currentBalance>0)
+        .sort((a,b)=>a.currentBalance-b.currentBalance);
+      if(activeSnowDebts.length>0){
+        const sBals={};const sRates={};
+        activeSnowDebts.forEach(d=>{
+          sBals[d.id]=d.currentBalance;
+          sRates[d.id]=(d.interestRate||0)/intPeriods(d.interestFreq||"m")/100;
+        });
+        activeSnowDebts.forEach(d=>{snowWeekAlloc[d.linkedCatId]={}});
+        const now=new Date();
+        let curWi=0;
+        for(let i=0;i<W.length;i++){const sun=W[i];const mon=new Date(sun);mon.setDate(mon.getDate()-6);if(now>=mon&&now<=sun){curWi=i;break}if(now<mon){curWi=Math.max(0,i-1);break}if(i===W.length-1)curWi=i}
+        const totalWk=snowballPlan.totalWeekly;
+        let sPrevMos={};
+        activeSnowDebts.forEach(d=>{
+          const sun=curWi<W.length?W[curWi]:now;
+          sPrevMos[d.id]=sun.getMonth();
+        });
+        for(let wi=curWi+1;wi<NW;wi++){
+          const sun=W[wi];
+          const cm=sun.getMonth();
+          activeSnowDebts.forEach(d=>{
+            if(sBals[d.id]>0&&interestDueInWeek(d,sun,sPrevMos[d.id],wi)){
+              sBals[d.id]+=Math.round(sBals[d.id]*sRates[d.id]*100)/100;
+            }
+            sPrevMos[d.id]=cm;
+          });
+          const alive=activeSnowDebts.filter(d=>sBals[d.id]>0).sort((a,b)=>sBals[a.id]-sBals[b.id]);
+          let wkRem=alive.length>0?totalWk:0;
+          const wkAlloc={};
+          alive.forEach(d=>{
+            const minDue=minPaymentDueInWeek(d,wi,sun);
+            const m=Math.min(minDue,wkRem,sBals[d.id]);
+            wkAlloc[d.id]=m;wkRem-=m;
+          });
+          for(const d of alive){
+            if(wkRem<=0)break;
+            const extra=Math.min(wkRem,sBals[d.id]-(wkAlloc[d.id]||0));
+            wkAlloc[d.id]=(wkAlloc[d.id]||0)+extra;wkRem-=extra;
+          }
+          activeSnowDebts.forEach(d=>{
+            const pay=wkAlloc[d.id]||0;
+            sBals[d.id]=Math.round(Math.max(0,sBals[d.id]-pay)*100)/100;
+            snowWeekAlloc[d.linkedCatId][wi]=pay;
+          });
+        }
+      }
+    }
+    const sw=startWeek!=null?startWeek:0;
+    for(let i=sw;i<NW;i++){
+      if(i<=lastActual||comp[i]){
+        // Include custom transaction amounts alongside account data
+        const custInc=customTxns[i]?customTxns[i].filter(t=>t.type==='income').reduce((s,t)=>s+t.amt,0):0;
+        const custExp=customTxns[i]?customTxns[i].filter(t=>t.type!=='income').reduce((s,t)=>s+t.amt,0):0;
+        fInc[i]=wT[i].inc+custInc;fExp[i]=wT[i].exp+custExp;continue}
+      let wInc=0,wExp=0;
+      INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i,c.id);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
+      AEXP.forEach(c=>{
+        const snowOvr=snowWeekAlloc[c.id];
+        const bv=snowOvr&&snowOvr[i]!=null?snowOvr[i]:budgetForWeek(budgets[c.id],i,c.id);
+        if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0;
+      });
+      fInc[i]=wInc;fExp[i]=wExp;
+      const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:null);
+      if(prev!=null)fBal[i+1]=Math.round((prev+wInc-wExp)*100)/100;
+    }
+    for(let i=Math.max(1,sw);i<=NW;i++){
+      if(fBal[i]==null&&fBal[i-1]!=null&&i-1>lastActual){
+        fBal[i]=Math.round((fBal[i-1]+fInc[i-1]-fExp[i-1])*100)/100;
+      }
+    }
+    return{fInc,fExp,fBal,wkInc:wkIncAvg,wkExp:wkExpAvg,wkNet:wkIncAvg-wkExpAvg,lastActual,projCat};
+  },[budgets,rB,wT,accts,acctData,freqToWeekly,budgetForWeek,comp,NW,catData,customTxns,snowballPlan,debtInfos,W,interestDueInWeek,minPaymentDueInWeek]);
 
   // ─── Sync snowball allocations → linked category budgets ───
   useEffect(()=>{
