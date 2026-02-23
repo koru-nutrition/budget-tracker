@@ -710,7 +710,7 @@ export default function App({ initialData, onDataChange, theme }){
         if(txns&&txns.length>0){
           const sum=txns.reduce((s,t)=>s+t.amt,0);
           if(INC_IDS.has(cat.id)){
-            n[cat.id][wi]=Math.round(sum*100)/100;
+            n[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;
           } else {
             n[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;
             if(sum>0)n[cat.id][wi]=Math.round(-sum*100)/100;
@@ -766,7 +766,7 @@ export default function App({ initialData, onDataChange, theme }){
         const txns=catGroups[cat.id];
         if(txns&&txns.length>0){
           const sum=txns.reduce((s,t)=>s+t.amt,0);
-          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(sum*100)/100}
+          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100}
           else{newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)newCatData[cat.id][wi]=Math.round(-sum*100)/100}
         } else {newCatData[cat.id][wi]=null}
       });
@@ -821,7 +821,7 @@ export default function App({ initialData, onDataChange, theme }){
             const txns=n[wi][cid]||[];
             if(txns.length===0){nd[cid][wi]=null;return}
             const sum=txns.reduce((s,t)=>s+t.amt,0);
-            if(INC_IDS.has(cid)){nd[cid][wi]=Math.round(sum*100)/100}
+            if(INC_IDS.has(cid)){nd[cid][wi]=Math.round(Math.abs(sum)*100)/100}
             else{nd[cid][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)nd[cid][wi]=Math.round(-sum*100)/100}
           });
           return nd;
