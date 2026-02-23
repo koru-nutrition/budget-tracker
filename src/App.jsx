@@ -627,7 +627,7 @@ export default function App({ initialData, onDataChange, theme }){
       };
       reader.readAsText(file);
     });
-  },[accts]);
+  },[accts,NW,W,INC,ECAT,catMap,autoCateg,fallbackInc,fallbackExp]);
 
   // ─── Import apply ───
   const curImpWi=impWkList[impCurWk]!=null?impWkList[impCurWk]:null;
