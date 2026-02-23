@@ -279,6 +279,7 @@ export default function App({ initialData, onDataChange, theme }){
   const[collCats,setCollCats]=useState({});
   const[showAccts,setShowAccts]=useState(false);
   const[budgets,setBudgets]=useState({});
+  const[weeklyBudgetAdj,setWeeklyBudgetAdj]=useState({});// {weekIndex: {catId: adjustedAmount}} per-week per-item budget overrides
   const[budgetOpen,setBudgetOpen]=useState(false);
   const[startWeek,setStartWeek]=useState(null);// week index where tracking begins
   const[openingBalance,setOpeningBalance]=useState(0);// balance at start of startWeek
@@ -407,7 +408,7 @@ export default function App({ initialData, onDataChange, theme }){
       if(s.a)setAccts(s.a);if(s.ad)setAcctData(s.ad);if(s.c)setComp(s.c);
       if(s.t)setTxnStore(s.t);if(s.cd)setCatData(s.cd);if(s.ct)setCatTxns(s.ct);
       if(s.cxt)setCustomTxns(s.cxt);
-      if(s.cm)setCatMap(s.cm);if(s.bu)setBudgets(s.bu);
+      if(s.cm)setCatMap(s.cm);if(s.bu)setBudgets(s.bu);if(s.wba)setWeeklyBudgetAdj(s.wba);
       if(s.inc)setINC(s.inc);if(s.ecat)setECAT(s.ecat);
       if(s.sw!=null)setStartWeek(s.sw);
       if(s.ob!=null)setOpeningBalance(s.ob);
@@ -421,9 +422,9 @@ export default function App({ initialData, onDataChange, theme }){
   // ─── Save to Firebase (via props) ───
   useEffect(()=>{
     if(!ready)return;
-    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cxt:customTxns,cm:catMap,bu:budgets,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget,fbi:fallbackInc,fbe:fallbackExp};
+    const data={a:accts,ad:acctData,c:comp,t:txnStore,cd:catData,ct:catTxns,cxt:customTxns,cm:catMap,bu:budgets,wba:weeklyBudgetAdj,inc:INC,ecat:ECAT,sw:startWeek,ob:openingBalance,db:debts,dbu:debtBudget,fbi:fallbackInc,fbe:fallbackExp};
     if(onDataChange)onDataChange(data);
-  },[accts,acctData,comp,txnStore,catData,catTxns,customTxns,catMap,ready,budgets,INC,ECAT,startWeek,openingBalance,debts,debtBudget,fallbackInc,fallbackExp]);// eslint-disable-line
+  },[accts,acctData,comp,txnStore,catData,catTxns,customTxns,catMap,ready,budgets,weeklyBudgetAdj,INC,ECAT,startWeek,openingBalance,debts,debtBudget,fallbackInc,fallbackExp]);// eslint-disable-line
 
   // ─── Auto-link: create cashflow categories for any debts missing one ───
   const debtMigrated=useRef(false);
@@ -883,7 +884,7 @@ export default function App({ initialData, onDataChange, theme }){
   const wipeAll=useCallback(()=>{
     setAcctData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=Array(NW).fill(null)});return n});
     setCatData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=Array(NW).fill(null)});return n});
-    setTxnStore({});setCatTxns({});setCustomTxns({});setComp({});setCatMap({});
+    setTxnStore({});setCatTxns({});setCustomTxns({});setComp({});setCatMap({});setWeeklyBudgetAdj({});
   },[]);
   const wipeWeek=useCallback(wi=>{
     setAcctData(p=>{const n={};Object.keys(p).forEach(k=>{n[k]=[...p[k]];n[k][wi]=null});return n});
@@ -891,6 +892,7 @@ export default function App({ initialData, onDataChange, theme }){
     setTxnStore(p=>{const n={...p};delete n[wi];return n});
     setCatTxns(p=>{const n={...p};delete n[wi];return n});
     setCustomTxns(p=>{const n={...p};delete n[wi];return n});
+    setWeeklyBudgetAdj(p=>{const n={...p};delete n[wi];return n});
     setComp(p=>{const n={...p};delete n[wi];return n});
   },[]);
   // Clean up all data referencing a deleted category item
@@ -899,6 +901,7 @@ export default function App({ initialData, onDataChange, theme }){
     setCatTxns(p=>{const n={...p};Object.keys(n).forEach(wi=>{if(n[wi]&&n[wi][deletedId]){n[wi]={...n[wi]};delete n[wi][deletedId]}});return n});
     setCustomTxns(p=>{const n={...p};Object.keys(n).forEach(wi=>{const filtered=n[wi].filter(t=>t.catId!==deletedId);if(filtered.length===0)delete n[wi];else n[wi]=filtered});return n});
     setBudgets(p=>{const n={...p};delete n[deletedId];return n});
+    setWeeklyBudgetAdj(p=>{const n={...p};Object.keys(n).forEach(wi=>{if(n[wi]&&n[wi][deletedId]){n[wi]={...n[wi]};delete n[wi][deletedId];if(Object.keys(n[wi]).length===0)delete n[wi]}});return n});
     setCatMap(p=>{const n={};Object.entries(p).forEach(([k,v])=>{if(v!==deletedId)n[k]=v});return n});
     setDebts(p=>p.map(d=>d.linkedCatId===deletedId?{...d,linkedCatId:null}:d));
   },[]);
@@ -973,7 +976,9 @@ export default function App({ initialData, onDataChange, theme }){
   const stL={position:"sticky",left:0,zIndex:2,background:P.card,borderRight:"1px solid "+P.bd};
 
   // ─── Budget: check if a budget applies to a specific week ───
-  const budgetForWeek=useCallback((b,wi)=>{
+  // catId is optional — if provided, checks weeklyBudgetAdj for a per-week override first
+  const budgetForWeek=useCallback((b,wi,catId)=>{
+    if(catId&&weeklyBudgetAdj[wi]&&weeklyBudgetAdj[wi][catId]!=null)return weeklyBudgetAdj[wi][catId];
     if(!b||!b.amt)return 0;
     const freq=b.freq||"w";
     if(freq==="w")return b.amt;
@@ -1010,7 +1015,7 @@ export default function App({ initialData, onDataChange, theme }){
       return 0;
     }
     return b.amt;
-  },[]);
+  },[weeklyBudgetAdj]);
   const freqToWeekly=useCallback((amt,freq)=>{
     if(freq==="w")return amt;if(freq==="f")return amt/2;
     if(freq==="m")return amt*12/52;if(freq==="q")return amt*4/52;return amt;
@@ -1076,8 +1081,8 @@ export default function App({ initialData, onDataChange, theme }){
         const custExp=customTxns[i]?customTxns[i].filter(t=>t.type!=='income').reduce((s,t)=>s+t.amt,0):0;
         fInc[i]=wT[i].inc+custInc;fExp[i]=wT[i].exp+custExp;continue}
       let wInc=0,wExp=0;
-      INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
-      AEXP.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0});
+      INC.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i,c.id);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wInc+=(mv!=null?mv:bv)||0});
+      AEXP.forEach(c=>{const bv=budgetForWeek(budgets[c.id],i,c.id);if(bv)projCat[c.id][i]=bv;const mv=catData[c.id]&&catData[c.id][i];wExp+=(mv!=null?mv:bv)||0});
       fInc[i]=wInc;fExp[i]=wExp;
       const prev=fBal[i]!=null?fBal[i]:(i>0?fBal[i-1]:null);
       if(prev!=null)fBal[i+1]=Math.round((prev+wInc-wExp)*100)/100;
@@ -1454,7 +1459,8 @@ export default function App({ initialData, onDataChange, theme }){
   };
 
   // ─── Category cell click ───
-  const onCatCell=(id,wi)=>{setCellDetail({id,wi,isCat:true});setEVal("")};
+  const[budAdjVal,setBudAdjVal]=useState("");
+  const onCatCell=(id,wi)=>{setCellDetail({id,wi,isCat:true});setEVal("");const adj=weeklyBudgetAdj[wi]&&weeklyBudgetAdj[wi][id];setBudAdjVal(adj!=null?String(adj):"")};
   const onAcctCell=(id,wi)=>{setCellDetail({id,wi,isCat:false});setEVal("")};
 
   return(
@@ -1600,41 +1606,39 @@ export default function App({ initialData, onDataChange, theme }){
             </div>
           </div>;
           const openBal=forecast.fBal[wi]!=null?forecast.fBal[wi]:(rB[wi]!=null?rB[wi]:openingBalance);
-          // Actual data for this week
-          const actInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];return s+(v!=null?v:0)},0);
-          const actExp=ECAT.reduce((s,cat)=>s+cat.items.reduce((s2,it)=>{const v=catData[it.id]&&catData[it.id][wi];return s2+(v!=null?v:0)},0),0);
+          // Per-item: use actual if available, budget otherwise (never hide budgeted items just because another item has actual data)
           const hasAcctData=accts.some(a=>acctData[a.id]&&acctData[a.id][wi]!=null);
           const hasCatData=INC.some(c=>catData[c.id]&&catData[c.id][wi]!=null)||ECAT.some(cat=>cat.items.some(it=>catData[it.id]&&catData[it.id][wi]!=null));
-          const hasActual=hasAcctData||hasCatData;
-          // Budgeted data for this week
-          const budInc=INC.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
-          const budExp=AEXP.reduce((s,c)=>{const v=budgetForWeek(budgets[c.id],wi);return s+v},0);
-          // Use actual if available, budget otherwise
-          const wkInc=hasActual?actInc:budInc;
-          const wkExp=hasActual?actExp:budExp;
+          const hasAnyData=hasAcctData||hasCatData;
+          // Compute income/expense totals: for each item, use actual if present, else budget
+          const wkInc=INC.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];const bv=budgetForWeek(budgets[c.id],wi,c.id);return s+(v!=null?v:bv)},0);
+          const wkExp=AEXP.reduce((s,c)=>{const v=catData[c.id]&&catData[c.id][wi];const bv=budgetForWeek(budgets[c.id],wi,c.id);return s+(v!=null?v:bv)},0);
           const wkNet=wkInc-wkExp;
           const closeBal=Math.round((openBal+wkInc-wkExp)*100)/100;
           const isComp=!!comp[wi];
           // Expense items for this week grouped by category (excluding debt-linked)
+          const wAdj=weeklyBudgetAdj[wi]||{};
           const expRows=ECAT_REG.map(cat=>{
             const items=cat.items.map(it=>{
               const actual=catData[it.id]&&catData[it.id][wi];
-              const bud=budgetForWeek(budgets[it.id],wi);
-              return{id:it.id,n:it.n,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
+              const bud=budgetForWeek(budgets[it.id],wi,it.id);
+              const hasAdj=wAdj[it.id]!=null;
+              return{id:it.id,n:it.n,actual,bud,hasAdj,display:actual!=null?actual:(bud||null)};
             }).filter(x=>x.display!=null&&x.display!==0);
             return{n:cat.n,c:cat.c,items};
           }).filter(g=>g.items.length>0);
           // Debt-linked expense items for this week (read-only)
           const debtExpRows=ECAT_DEBT_ITEMS.map(it=>{
             const actual=catData[it.id]&&catData[it.id][wi];
-            const bud=budgetForWeek(budgets[it.id],wi);
-            return{id:it.id,n:it.n,debtName:it.debtName,groupColor:it.groupColor,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
+            const bud=budgetForWeek(budgets[it.id],wi,it.id);
+            return{id:it.id,n:it.n,debtName:it.debtName,groupColor:it.groupColor,actual,bud,display:actual!=null?actual:(bud||null)};
           }).filter(x=>x.display!=null&&x.display!==0);
           // Income items
           const incRows=INC.map(c=>{
             const actual=catData[c.id]&&catData[c.id][wi];
-            const bud=budgetForWeek(budgets[c.id],wi);
-            return{id:c.id,n:c.n,actual,bud,display:actual!=null?actual:(!hasActual?(bud||null):null)};
+            const bud=budgetForWeek(budgets[c.id],wi,c.id);
+            const hasAdj=wAdj[c.id]!=null;
+            return{id:c.id,n:c.n,actual,bud,hasAdj,display:actual!=null?actual:(bud||null)};
           }).filter(x=>x.display!=null&&x.display!==0);
           // Add/edit expense handler
           const addExpense=()=>{
@@ -1721,12 +1725,12 @@ export default function App({ initialData, onDataChange, theme }){
               {incRows.length>0?incRows.map(inc=>
                 <div key={inc.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 16px",borderTop:"1px solid "+P.bdL,minHeight:44,
                   cursor:"pointer"}} onClick={()=>onCatCell(inc.id,wi)}>
-                  <span style={{fontSize:12,color:P.tx}}>{inc.n}</span>
+                  <span style={{fontSize:12,color:P.tx}}>{inc.n}{inc.hasAdj&&<span style={{fontSize:8,color:P.warn,marginLeft:4,verticalAlign:"super"}}>adj</span>}</span>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(inc.bud)}</span>}
+                    {inc.actual!=null&&inc.bud>0&&<span style={{fontSize:9,color:inc.hasAdj?P.warn:P.txM}}>budget {fm(inc.bud)}</span>}
                     <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.pos,cursor:"pointer",
                       opacity:inc.actual!=null?1:0.5,borderBottom:"1px dashed "+P.bd}}>{fm(inc.display)}</span>
-                    {inc.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                    {inc.actual==null&&<span style={{fontSize:8,color:inc.hasAdj?P.warn:P.txM,fontStyle:"italic"}}>{inc.hasAdj?"adjusted":"expected"}</span>}
                   </div>
                 </div>
               ):<div style={{padding:"10px 16px",borderTop:"1px solid "+P.bdL,fontSize:11,color:P.txM,textAlign:"center"}}>No income expected</div>}
@@ -1776,12 +1780,12 @@ export default function App({ initialData, onDataChange, theme }){
                   {grp.items.map(it=>
                     <div key={it.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 16px 7px 34px",borderTop:"1px solid "+P.bdL,minHeight:44,
                       cursor:"pointer"}} onClick={()=>onCatCell(it.id,wi)}>
-                      <span style={{fontSize:12,color:P.tx}}>{it.n}</span>
+                      <span style={{fontSize:12,color:P.tx}}>{it.n}{it.hasAdj&&<span style={{fontSize:8,color:P.warn,marginLeft:4,verticalAlign:"super"}}>adj</span>}</span>
                       <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:P.txM}}>budget {fm(it.bud)}</span>}
+                        {it.actual!=null&&it.bud>0&&<span style={{fontSize:9,color:it.hasAdj?P.warn:P.txM}}>budget {fm(it.bud)}</span>}
                         <span style={{fontSize:13,fontWeight:600,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",color:P.neg,cursor:"pointer",
                           opacity:it.actual!=null?1:0.5,borderBottom:"1px dashed "+P.bd}}>{fm(it.display)}</span>
-                        {it.actual==null&&<span style={{fontSize:8,color:P.txM,fontStyle:"italic"}}>expected</span>}
+                        {it.actual==null&&<span style={{fontSize:8,color:it.hasAdj?P.warn:P.txM,fontStyle:"italic"}}>{it.hasAdj?"adjusted":"expected"}</span>}
                       </div>
                     </div>
                   )}
@@ -1855,7 +1859,7 @@ export default function App({ initialData, onDataChange, theme }){
               </div>
             </div>
 
-            {!hasActual&&budInc===0&&budExp===0&&<div style={{background:P.card,borderRadius:16,padding:"20px 16px",border:"1px solid "+P.bd,textAlign:"center"}}>
+            {!hasAnyData&&wkInc===0&&wkExp===0&&<div style={{background:P.card,borderRadius:16,padding:"20px 16px",border:"1px solid "+P.bd,textAlign:"center"}}>
               <div style={{fontSize:11,color:P.txM}}>No data or budgets set for this week. Import transactions on the Cashflow tab or set budgets on the Dashboard tab.</div>
             </div>}
           </div>;
@@ -3435,9 +3439,48 @@ export default function App({ initialData, onDataChange, theme }){
           {cellDetail.isCat&&!cdIsAcct&&debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12,padding:"10px 14px",background:P.w02,borderRadius:8,fontSize:10,color:P.blue,textAlign:"center"}}>
             This category is linked to a debt. Payments are tracked from imported transactions.
           </div>}
+          {/* Budget adjustment for this week */}
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&(()=>{
+            const baseBud=budgetForWeek(budgets[cellDetail.id],cellDetail.wi);
+            const hasAdj=weeklyBudgetAdj[cellDetail.wi]&&weeklyBudgetAdj[cellDetail.wi][cellDetail.id]!=null;
+            return <div style={{marginTop:12}}>
+              <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>
+                Budget This Week{hasAdj&&<span style={{color:P.warn,marginLeft:6,fontStyle:"italic",textTransform:"none"}}>adjusted</span>}
+              </div>
+              {baseBud>0||hasAdj?<div>
+                <div style={{fontSize:10,color:P.txD,marginBottom:6}}>
+                  Overall budget: {fm(baseBud)}{hasAdj&&<span style={{color:P.warn}}> → this week: {fm(weeklyBudgetAdj[cellDetail.wi][cellDetail.id])}</span>}
+                </div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
+                  <input type="number" step="0.01" value={budAdjVal} onChange={e=>setBudAdjVal(e.target.value)} placeholder={baseBud>0?baseBud.toFixed(2):"0.00"}
+                    onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(budAdjVal);if(!isNaN(v)&&v>=0){
+                      setWeeklyBudgetAdj(p=>{const n={...p};if(!n[cellDetail.wi])n[cellDetail.wi]={};n[cellDetail.wi]={...n[cellDetail.wi],[cellDetail.id]:v};return n});setCellDetail(null)}}}}
+                    style={{flex:1,padding:"8px 10px",border:"1px solid "+(hasAdj?P.warn+"60":P.bd),borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx,minHeight:44}}/>
+                  <button onClick={()=>{const v=parseFloat(budAdjVal);if(isNaN(v)||v<0)return;
+                    setWeeklyBudgetAdj(p=>{const n={...p};if(!n[cellDetail.wi])n[cellDetail.wi]={};n[cellDetail.wi]={...n[cellDetail.wi],[cellDetail.id]:v};return n});setCellDetail(null)}}
+                    style={{padding:"8px 14px",borderRadius:8,border:"none",background:P.warnL,color:P.warn,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Set</button>
+                  {hasAdj&&<button onClick={()=>{
+                    setWeeklyBudgetAdj(p=>{const n={...p};if(n[cellDetail.wi]){n[cellDetail.wi]={...n[cellDetail.wi]};delete n[cellDetail.wi][cellDetail.id];if(Object.keys(n[cellDetail.wi]).length===0)delete n[cellDetail.wi]}return n});setCellDetail(null)}}
+                    style={{padding:"8px 10px",borderRadius:8,border:"1px solid "+P.bd,background:P.w04,color:P.txD,fontSize:11,cursor:"pointer",minHeight:44}}>Reset</button>}
+                </div>
+              </div>
+              :<div style={{fontSize:10,color:P.txD}}>No budget set for this item. Set a budget on the Dashboard tab first, or enter an amount to set a budget for this week only.</div>}
+              {!baseBud&&!hasAdj&&<div style={{display:"flex",gap:6,alignItems:"center",marginTop:6}}>
+                <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
+                <input type="number" step="0.01" value={budAdjVal} onChange={e=>setBudAdjVal(e.target.value)} placeholder="0.00"
+                  onKeyDown={e=>{if(e.key==="Enter"){const v=parseFloat(budAdjVal);if(!isNaN(v)&&v>0){
+                    setWeeklyBudgetAdj(p=>{const n={...p};if(!n[cellDetail.wi])n[cellDetail.wi]={};n[cellDetail.wi]={...n[cellDetail.wi],[cellDetail.id]:v};return n});setCellDetail(null)}}}}
+                  style={{flex:1,padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:12,fontVariantNumeric:"tabular-nums",letterSpacing:"-0.02em",background:P.bg,color:P.tx,minHeight:44}}/>
+                <button onClick={()=>{const v=parseFloat(budAdjVal);if(isNaN(v)||v<=0)return;
+                  setWeeklyBudgetAdj(p=>{const n={...p};if(!n[cellDetail.wi])n[cellDetail.wi]={};n[cellDetail.wi]={...n[cellDetail.wi],[cellDetail.id]:v};return n});setCellDetail(null)}}
+                  style={{padding:"8px 14px",borderRadius:8,border:"none",background:P.warnL,color:P.warn,fontSize:11,fontWeight:600,cursor:"pointer",minHeight:44}}>Set</button>
+              </div>}
+            </div>;
+          })()}
           {/* Edit controls for non-completed, non-pre-start, non-debt-linked category cells */}
           {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12}}>
-            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Add Custom Entry</div>
+            <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Add Custom Transaction</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
               <input type="number" step="0.01" value={eVal} onChange={e=>setEVal(e.target.value)} placeholder="0.00"
