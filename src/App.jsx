@@ -445,6 +445,28 @@ export default function App({ initialData, onDataChange, theme }){
     setDebts(prev=>prev.map(d=>debtUpdates[d.id]?{...d,linkedCatId:debtUpdates[d.id]}:d));
   },[ready]);// eslint-disable-line
 
+  // ─── Migration: fix negative income values in existing data ───
+  const incMigrated=useRef(false);
+  useEffect(()=>{
+    if(!ready||incMigrated.current)return;
+    incMigrated.current=true;
+    setCatData(prev=>{
+      let changed=false;
+      const n={...prev};
+      INC_IDS.forEach(id=>{
+        if(!n[id])return;
+        const arr=n[id];
+        for(let i=0;i<arr.length;i++){
+          if(arr[i]!=null&&arr[i]<0){
+            if(!changed){changed=true;Object.keys(n).forEach(k=>{n[k]=[...n[k]]})}
+            n[id][i]=Math.abs(arr[i]);
+          }
+        }
+      });
+      return changed?n:prev;
+    });
+  },[ready]);// eslint-disable-line
+
   // ─── Confetti ───
   useEffect(()=>{
     if(!confetti)return;
@@ -710,7 +732,7 @@ export default function App({ initialData, onDataChange, theme }){
         if(txns&&txns.length>0){
           const sum=txns.reduce((s,t)=>s+t.amt,0);
           if(INC_IDS.has(cat.id)){
-            n[cat.id][wi]=Math.round(sum*100)/100;
+            n[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;
           } else {
             n[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;
             if(sum>0)n[cat.id][wi]=Math.round(-sum*100)/100;
@@ -766,7 +788,7 @@ export default function App({ initialData, onDataChange, theme }){
         const txns=catGroups[cat.id];
         if(txns&&txns.length>0){
           const sum=txns.reduce((s,t)=>s+t.amt,0);
-          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(sum*100)/100}
+          if(INC_IDS.has(cat.id)){newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100}
           else{newCatData[cat.id][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)newCatData[cat.id][wi]=Math.round(-sum*100)/100}
         } else {newCatData[cat.id][wi]=null}
       });
@@ -821,7 +843,7 @@ export default function App({ initialData, onDataChange, theme }){
             const txns=n[wi][cid]||[];
             if(txns.length===0){nd[cid][wi]=null;return}
             const sum=txns.reduce((s,t)=>s+t.amt,0);
-            if(INC_IDS.has(cid)){nd[cid][wi]=Math.round(sum*100)/100}
+            if(INC_IDS.has(cid)){nd[cid][wi]=Math.round(Math.abs(sum)*100)/100}
             else{nd[cid][wi]=Math.round(Math.abs(sum)*100)/100;if(sum>0)nd[cid][wi]=Math.round(-sum*100)/100}
           });
           return nd;
