@@ -111,10 +111,40 @@ export default function AppWrapper() {
   const [pendingInvitations, setPendingInvitations] = useState([]);
   const [outgoingInvites, setOutgoingInvites] = useState([]);
 
+  // ─── localStorage recovery key ───
+  const RECOVERY_KEY = "bt_pending_save";
+
   // ─── Subscribe to household data (real-time) ───
   const startSubscription = useCallback((hid, uid) => {
     if (unsubData.current) unsubData.current();
-    unsubData.current = subscribeData(hid, ({ payload, updatedBy }) => {
+    let firstSnapshot = true;
+    unsubData.current = subscribeData(hid, ({ payload, updatedBy, updatedAt }) => {
+      // On the first snapshot after page load, check for unsaved data in localStorage
+      if (firstSnapshot) {
+        firstSnapshot = false;
+        try {
+          const raw = localStorage.getItem(RECOVERY_KEY);
+          if (raw) {
+            const recovered = JSON.parse(raw);
+            if (recovered.householdId === hid && recovered.data) {
+              const firestoreTime = updatedAt ? new Date(updatedAt).getTime() : 0;
+              if (recovered.ts > firestoreTime) {
+                // localStorage has newer data that never reached Firestore — recover it
+                setInitialData(recovered.data);
+                saveSharedData(hid, uid, recovered.data).then(() => {
+                  try { localStorage.removeItem(RECOVERY_KEY); } catch (e) {}
+                });
+                setLoaded(true);
+                return;
+              }
+            }
+            // Recovery data is older or invalid — discard it
+            localStorage.removeItem(RECOVERY_KEY);
+          }
+        } catch (e) {
+          try { localStorage.removeItem(RECOVERY_KEY); } catch (e2) {}
+        }
+      }
       if (payload) {
         setInitialData(payload);
         if (updatedBy && updatedBy !== uid) {
@@ -182,9 +212,18 @@ export default function AppWrapper() {
     pendingData.current = data;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     pendingSave.current = { householdId, uid: latestUid.current, data };
+    // Synchronous localStorage write — survives page refresh/close
+    try {
+      localStorage.setItem(RECOVERY_KEY, JSON.stringify({
+        householdId, uid: latestUid.current, data, ts: Date.now(),
+      }));
+    } catch (e) { /* localStorage full or unavailable — ignore */ }
     saveTimer.current = setTimeout(() => {
       pendingSave.current = null;
-      saveSharedData(householdId, latestUid.current, data);
+      saveSharedData(householdId, latestUid.current, data).then(() => {
+        // Firestore save succeeded — clear the localStorage backup
+        try { localStorage.removeItem(RECOVERY_KEY); } catch (e) {}
+      });
     }, 2000);
   }, [householdId]);
 
@@ -195,6 +234,13 @@ export default function AppWrapper() {
         const { householdId: hid, uid, data } = pendingSave.current;
         pendingSave.current = null;
         if (saveTimer.current) clearTimeout(saveTimer.current);
+        // Ensure localStorage backup is current (synchronous — guaranteed to complete)
+        try {
+          localStorage.setItem(RECOVERY_KEY, JSON.stringify({
+            householdId: hid, uid, data, ts: Date.now(),
+          }));
+        } catch (e) {}
+        // Also attempt async Firestore write (may complete with offline persistence)
         saveSharedData(hid, uid, data);
       }
     };
