@@ -5,7 +5,7 @@ const BASE_START=new Date(2025,2,31);// Mon Mar 31 2025
 const mkWeeks=(n,start)=>Array.from({length:n},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i*7+6);return d});// returns Sun end dates
 const FYE26_END=51;// week index 51 = Sun Mar 29 2026 (last full week before Apr 1)
 const INIT_WEEKS=104;// FYE26 (52 wks) + FYE27 (52 wks)
-let INIT_W=mkWeeks(INIT_WEEKS,BASE_START);
+const INIT_W=mkWeeks(INIT_WEEKS,BASE_START);
 const fd=d=>`${d.getDate()} ${d.toLocaleString("en-NZ",{month:"short"})}`;
 const fdr=d=>`${d.getDate()}/${d.getMonth()+1}`;
 const fm=v=>{if(v==null||isNaN(v))return"—";const n=v<0;return(n?"-$":"$")+Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,",")};
@@ -255,6 +255,10 @@ export default function App({ initialData, onDataChange, theme }){
     }
     return res;
   },[NW]);
+  const[accts,setAccts]=useState([]);
+  const[acctData,setAcctData]=useState({});
+  const[txnStore,setTxnStore]=useState({});
+  const[catData,setCatData]=useState({});
   const addYear=()=>{
     const newStart=new Date(BASE_START);newStart.setDate(newStart.getDate()+NW*7);
     const newWeeks=mkWeeks(52,newStart);
@@ -263,10 +267,6 @@ export default function App({ initialData, onDataChange, theme }){
     setAcctData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=[...prev[k],...Array(52).fill(null)]});return n});
     setCatData(prev=>{const n={};Object.keys(prev).forEach(k=>{n[k]=[...prev[k],...Array(52).fill(null)]});return n});
   };
-  const[accts,setAccts]=useState([]);
-  const[acctData,setAcctData]=useState({});
-  const[txnStore,setTxnStore]=useState({});
-  const[catData,setCatData]=useState({});
   const[catTxns,setCatTxns]=useState({});
   const[customTxns,setCustomTxns]=useState({});// {weekIndex: [{id,catId,amt,note,type:'expense'|'income'}]}
   const[catMap,setCatMap]=useState({});
@@ -467,6 +467,30 @@ export default function App({ initialData, onDataChange, theme }){
       });
       return changed?n:prev;
     });
+  },[ready]);// eslint-disable-line
+
+  // ─── Migration: port old manual catData entries into customTxns ───
+  const customTxnsMigrated=useRef(false);
+  useEffect(()=>{
+    if(!ready||customTxnsMigrated.current)return;
+    customTxnsMigrated.current=true;
+    // Only migrate if customTxns is empty (old data without the new system)
+    if(Object.keys(customTxns).length>0)return;
+    const allCats=[...INC,...ECAT.flatMap(g=>g.items)];
+    const newCxt={};
+    allCats.forEach(cat=>{
+      const arr=catData[cat.id];if(!arr)return;
+      const isInc=INC_IDS.has(cat.id);
+      for(let wi=0;wi<arr.length;wi++){
+        if(arr[wi]==null||arr[wi]===0)continue;
+        // Skip if this cell has CSV-imported transactions
+        if(catTxns[wi]&&catTxns[wi][cat.id]&&catTxns[wi][cat.id].length>0)continue;
+        // This was a manual entry — create a customTxn for it
+        if(!newCxt[wi])newCxt[wi]=[];
+        newCxt[wi].push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+"_m"+wi+"_"+cat.id,catId:cat.id,amt:Math.abs(arr[wi]),note:"Migrated entry",type:isInc?"income":"expense"});
+      }
+    });
+    if(Object.keys(newCxt).length>0)setCustomTxns(newCxt);
   },[ready]);// eslint-disable-line
 
   // ─── Confetti ───
@@ -901,6 +925,17 @@ export default function App({ initialData, onDataChange, theme }){
     return{inc,exp,net:inc-exp};
   }),[acctData,accts]);
 
+  // Category totals per week (for display)
+  const catWT=useMemo(()=>W.map((_,wi)=>{
+    let inc=0,exp=0;
+    INC.forEach(c=>{const v=catData[c.id]&&catData[c.id][wi];if(v!=null)inc+=v});
+    ECAT.forEach(cat=>cat.items.forEach(it=>{const v=catData[it.id]&&catData[it.id][wi];if(v!=null)exp+=v}));
+    return{inc,exp};
+  }),[catData]);
+
+  // Helper: compute custom transaction net for a given week (income positive, expense negative)
+  const custNetForWeek=useCallback(wi=>{const txns=customTxns[wi];if(!txns)return 0;return txns.reduce((s,t)=>t.type==='income'?s+t.amt:s-t.amt,0)},[customTxns]);
+
   const rB=useMemo(()=>{
     const b=Array(NW+1).fill(null);
     if(startWeek==null)return b;
@@ -911,30 +946,10 @@ export default function App({ initialData, onDataChange, theme }){
       const hasCust=customTxns[i]&&customTxns[i].length>0;
       const has=hasAcct||hasCust;
       if(!has)cont=false;
-      if(cont&&has&&b[i]!=null)b[i+1]=Math.round((b[i]+wT[i].net+customNet[i])*100)/100;
+      if(cont&&has&&b[i]!=null)b[i+1]=Math.round((b[i]+wT[i].net+custNetForWeek(i))*100)/100;
     }
     return b;
-  },[wT,acctData,accts,startWeek,openingBalance,customTxns,customNet]);
-
-  // Category totals per week (for display)
-  const catWT=useMemo(()=>W.map((_,wi)=>{
-    let inc=0,exp=0;
-    INC.forEach(c=>{const v=catData[c.id]&&catData[c.id][wi];if(v!=null)inc+=v});
-    ECAT.forEach(cat=>cat.items.forEach(it=>{const v=catData[it.id]&&catData[it.id][wi];if(v!=null)exp+=v}));
-    return{inc,exp};
-  }),[catData]);
-
-  // Custom transaction net per week (income positive, expense negative)
-  const customNet=useMemo(()=>{
-    const net=Array(NW).fill(0);
-    Object.entries(customTxns).forEach(([wi,txns])=>{
-      txns.forEach(t=>{
-        if(t.type==='income')net[+wi]+=t.amt;
-        else net[+wi]-=t.amt;
-      });
-    });
-    return net;
-  },[customTxns,NW]);
+  },[wT,acctData,accts,startWeek,openingBalance,customTxns,custNetForWeek]);
 
   const compCt=Object.keys(comp).length;
   const curWi=W.findIndex((_,i)=>getStat(i)==="u");
@@ -2441,7 +2456,7 @@ export default function App({ initialData, onDataChange, theme }){
 
                     {/* ── NET & BALANCE ── */}
                     <tr><td style={{...stL,padding:"4px 12px",fontSize:10,fontWeight:700,color:P.tx,borderBottom:"1px solid "+P.bd,background:P.card}}>Net</td>
-                      {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):(wT[wi].net+customNet[wi]);const hasCust=customTxns[wi]&&customTxns[wi].length>0;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp||hasCust);
+                      {fyWis.map(wi=>{const pre=wi<startWeek;const isF=wi>forecast.lastActual&&!comp[wi];const n=isF?(forecast.fInc[wi]-forecast.fExp[wi]):(wT[wi].net+custNetForWeek(wi));const hasCust=customTxns[wi]&&customTxns[wi].length>0;const has=isF?(forecast.fInc[wi]||forecast.fExp[wi]):(wT[wi].inc||wT[wi].exp||hasCust);
                         return <td key={wi} style={{...cS,fontWeight:700,color:pre?P.txM:has?(n>=0?P.pos:P.neg):P.txM,borderBottom:"1px solid "+P.bd,background:pre?P.w02:statStyle(getStat(wi)).bg}}>
                           <span style={{fontStyle:"normal",opacity:pre?0.4:isF&&has?0.65:1}}>{pre?"–":has?fm(n):"–"}</span></td>})}
                     </tr>
