@@ -1327,16 +1327,18 @@ export default function App({ initialData, onDataChange, theme }){
       });
       return;
     }
-    const snowFreq=debtBudget.freq||"w";
-    const snowDay=debtBudget.day||1;
     const updates={};
     debts.forEach(d=>{
       if(d.paidOff||d.dismissed||!d.linkedCatId)return;
       const wkAlloc=snowballPlan.allocations[d.id]||0;
       if(wkAlloc>0){
-        updates[d.linkedCatId]={amt:Math.round(weeklyToFreq(wkAlloc,snowFreq)*100)/100,freq:snowFreq,
-          ...(snowFreq==="m"&&{day:snowDay}),
-          ...(snowFreq==="f"&&{offset:0}),_snowball:true};
+        // Use the debt's own payment frequency and day so that budgetForWeek
+        // applies the full amount on the correct payment date
+        const dFreq=d.minPaymentFreq||"m";
+        const dDay=d.minPaymentDay||1;
+        updates[d.linkedCatId]={amt:Math.round(weeklyToFreq(wkAlloc,dFreq)*100)/100,freq:dFreq,
+          ...(dFreq==="m"&&{day:dDay}),
+          ...(dFreq==="f"&&{offset:0}),_snowball:true};
       }
     });
     if(Object.keys(updates).length===0)return;
@@ -1879,6 +1881,7 @@ export default function App({ initialData, onDataChange, theme }){
                   <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
                     style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:44}}>
                     {ECAT_REG.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
+                    {ECAT_DEBT_ITEMS.length>0&&ECAT_DEBT_ITEMS.map(it=><option key={it.id} value={it.id}>Debt — {it.n}</option>)}
                   </select>
                   <div style={{display:"flex",gap:8}}>
                     <div style={{flex:1,display:"flex",alignItems:"center",gap:4}}>
@@ -3494,10 +3497,10 @@ export default function App({ initialData, onDataChange, theme }){
 
           {/* Info message for debt-linked category cells */}
           {cellDetail.isCat&&!cdIsAcct&&debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12,padding:"10px 14px",background:P.w02,borderRadius:8,fontSize:10,color:P.blue,textAlign:"center"}}>
-            This category is linked to a debt. Payments are tracked from imported transactions.
+            This category is linked to a debt. Budget is auto-managed but can be adjusted below.
           </div>}
           {/* Budget adjustment for this week */}
-          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&(()=>{
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&(()=>{
             const baseBud=budgetForWeek(budgets[cellDetail.id],cellDetail.wi);
             const hasAdj=weeklyBudgetAdj[cellDetail.wi]&&weeklyBudgetAdj[cellDetail.wi][cellDetail.id]!=null;
             return <div style={{marginTop:12}}>
@@ -3535,8 +3538,8 @@ export default function App({ initialData, onDataChange, theme }){
               </div>}
             </div>;
           })()}
-          {/* Edit controls for non-completed, non-pre-start, non-debt-linked category cells */}
-          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12}}>
+          {/* Edit controls for non-completed, non-pre-start category cells */}
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&<div style={{marginTop:12}}>
             <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Add Custom Transaction</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
