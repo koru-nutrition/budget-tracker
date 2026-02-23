@@ -878,7 +878,7 @@ export default function App({ initialData, onDataChange, theme }){
       },0);
       return n;
     });
-  },[]);
+  },[INC_IDS]);
 
   // ─── Wipe ───
   const wipeAll=useCallback(()=>{
