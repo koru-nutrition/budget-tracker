@@ -1167,20 +1167,19 @@ export default function App({ initialData, onDataChange, theme }){
         }
         prevMos[d.id]=cm;
       });
-      // Allocate payments: date-aware minimums first, then extra to smallest
+      // Allocate payments: full minimums on due dates first, then extra to smallest
       const alive=active.filter(d=>bals[d.id]>0).sort((a,b)=>bals[a.id]-bals[b.id]);
       if(alive.length===0)break;
-      let wkRem=totalWk;
       const wkAlloc={};
       alive.forEach(d=>{
         const minDue=minPaymentDueInWeek(d,wi,sun);
-        const m=Math.min(minDue,wkRem,bals[d.id]);
-        wkAlloc[d.id]=m;wkRem-=m;
+        wkAlloc[d.id]=Math.min(minDue,bals[d.id]);
       });
+      let wkRem=extraWk;
       for(const d of alive){
         if(wkRem<=0)break;
-        const extra=Math.min(wkRem,bals[d.id]-wkAlloc[d.id]);
-        wkAlloc[d.id]+=extra;wkRem-=extra;
+        const extra=Math.min(wkRem,bals[d.id]-(wkAlloc[d.id]||0));
+        wkAlloc[d.id]=(wkAlloc[d.id]||0)+extra;wkRem-=extra;
       }
       // Apply payments
       alive.forEach(d=>{
@@ -1239,23 +1238,23 @@ export default function App({ initialData, onDataChange, theme }){
           const sun=curWi<W.length?W[curWi]:now;
           sPrevMos[d.id]=sun.getMonth();
         });
-        for(let wi=curWi+1;wi<NW;wi++){
+        const extraWkFc=snowballPlan.extraWeekly;
+        for(let wi=curWi;wi<NW;wi++){
           const sun=W[wi];
           const cm=sun.getMonth();
-          activeSnowDebts.forEach(d=>{
+          if(wi>curWi){activeSnowDebts.forEach(d=>{
             if(sBals[d.id]>0&&interestDueInWeek(d,sun,sPrevMos[d.id],wi)){
               sBals[d.id]+=Math.round(sBals[d.id]*sRates[d.id]*100)/100;
             }
             sPrevMos[d.id]=cm;
-          });
+          })}
           const alive=activeSnowDebts.filter(d=>sBals[d.id]>0).sort((a,b)=>sBals[a.id]-sBals[b.id]);
-          let wkRem=alive.length>0?totalWk:0;
           const wkAlloc={};
           alive.forEach(d=>{
             const minDue=minPaymentDueInWeek(d,wi,sun);
-            const m=Math.min(minDue,wkRem,sBals[d.id]);
-            wkAlloc[d.id]=m;wkRem-=m;
+            wkAlloc[d.id]=Math.min(minDue,sBals[d.id]);
           });
+          let wkRem=alive.length>0?extraWkFc:0;
           for(const d of alive){
             if(wkRem<=0)break;
             const extra=Math.min(wkRem,sBals[d.id]-(wkAlloc[d.id]||0));
@@ -1327,16 +1326,13 @@ export default function App({ initialData, onDataChange, theme }){
       });
       return;
     }
-    const snowFreq=debtBudget.freq||"w";
-    const snowDay=debtBudget.day||1;
     const updates={};
     debts.forEach(d=>{
       if(d.paidOff||d.dismissed||!d.linkedCatId)return;
-      const wkAlloc=snowballPlan.allocations[d.id]||0;
-      if(wkAlloc>0){
-        updates[d.linkedCatId]={amt:Math.round(weeklyToFreq(wkAlloc,snowFreq)*100)/100,freq:snowFreq,
-          ...(snowFreq==="m"&&{day:snowDay}),
-          ...(snowFreq==="f"&&{offset:0}),_snowball:true};
+      if(d.minimumPayment&&d.minimumPayment>0){
+        const freq=d.minPaymentFreq||"m";
+        updates[d.linkedCatId]={amt:d.minimumPayment,freq:freq,
+          ...(freq==="m"&&{day:d.minPaymentDay||1}),_snowball:true};
       }
     });
     if(Object.keys(updates).length===0)return;
@@ -1879,6 +1875,8 @@ export default function App({ initialData, onDataChange, theme }){
                   <select value={twAddCat} onChange={e=>setTwAddCat(e.target.value)}
                     style={{padding:"8px 10px",border:"1px solid "+P.bd,borderRadius:8,fontSize:11,background:P.card,color:P.tx,minHeight:44}}>
                     {ECAT_REG.map(cat=>cat.items.map(it=><option key={it.id} value={it.id}>{cat.n} — {it.n}</option>)).flat()}
+                    {ECAT_DEBT_ITEMS.length>0&&<option disabled>──── Debt Payments ────</option>}
+                    {ECAT_DEBT_ITEMS.map(it=><option key={it.id} value={it.id}>Debt — {it.n}</option>)}
                   </select>
                   <div style={{display:"flex",gap:8}}>
                     <div style={{flex:1,display:"flex",alignItems:"center",gap:4}}>
@@ -3494,10 +3492,10 @@ export default function App({ initialData, onDataChange, theme }){
 
           {/* Info message for debt-linked category cells */}
           {cellDetail.isCat&&!cdIsAcct&&debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12,padding:"10px 14px",background:P.w02,borderRadius:8,fontSize:10,color:P.blue,textAlign:"center"}}>
-            This category is linked to a debt. Payments are tracked from imported transactions.
+            This category is linked to a debt. Budget is auto-managed but you can adjust it below.
           </div>}
           {/* Budget adjustment for this week */}
-          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&(()=>{
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&(()=>{
             const baseBud=budgetForWeek(budgets[cellDetail.id],cellDetail.wi);
             const hasAdj=weeklyBudgetAdj[cellDetail.wi]&&weeklyBudgetAdj[cellDetail.wi][cellDetail.id]!=null;
             return <div style={{marginTop:12}}>
@@ -3535,8 +3533,8 @@ export default function App({ initialData, onDataChange, theme }){
               </div>}
             </div>;
           })()}
-          {/* Edit controls for non-completed, non-pre-start, non-debt-linked category cells */}
-          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&!debtLinkedIds.has(cellDetail.id)&&<div style={{marginTop:12}}>
+          {/* Edit controls for non-completed, non-pre-start category cells */}
+          {cellDetail.isCat&&!cdIsAcct&&!comp[cellDetail.wi]&&cellDetail.wi>=(startWeek||0)&&<div style={{marginTop:12}}>
             <div style={{fontSize:9,fontWeight:600,color:P.txM,marginBottom:5,textTransform:"uppercase",letterSpacing:".05em"}}>Add Custom Transaction</div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
               <span style={{fontSize:12,color:P.txM,fontWeight:600}}>$</span>
