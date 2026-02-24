@@ -1125,10 +1125,13 @@ export default function App({ initialData, onDataChange, theme }){
     const extraWk=debtBudget.amt?freqToWeekly(debtBudget.amt,debtBudget.freq||"w"):0;
     if(extraWk<=0||debts.length===0)return{active:false,totalWeekly:0,extraWeekly:0,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:null,debtFreeDate:null};
     const active=debtInfos.filter(d=>!d.paidOff&&!d.dismissed&&d.currentBalance>0).sort((a,b)=>a.currentBalance-b.currentBalance);
-    if(active.length===0)return{active:true,totalWeekly:extraWk,extraWeekly:extraWk,totalMinWeekly:0,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
-    // Auto-include minimums for all active debts
+    // Include freed minimums from paid-off debts so the snowball rolls forward
+    const paidOffMinWk=debtInfos.filter(d=>d.paidOff&&!d.dismissed&&d.linkedCatId)
+      .reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
+    if(active.length===0)return{active:true,totalWeekly:extraWk+paidOffMinWk,extraWeekly:extraWk,totalMinWeekly:paidOffMinWk,allocations:{},schedule:[],totalMonths:0,debtFreeDate:new Date()};
+    // Auto-include minimums for all active debts + freed minimums from paid-off debts
     const totalMinWk=active.reduce((s,d)=>s+(d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0),0);
-    const totalWk=extraWk+totalMinWk;
+    const totalWk=extraWk+totalMinWk+paidOffMinWk;
     // Current week allocation: minimums first, extra to smallest
     const alloc={};
     let rem=totalWk;
@@ -1195,7 +1198,7 @@ export default function App({ initialData, onDataChange, theme }){
     const totalWeeks=lastPayoff?lastPayoff.payoffWeek:null;
     const allPaidOff=active.every(d=>bals[d.id]<=0);
     return{
-      active:true,totalWeekly:totalWk,extraWeekly:extraWk,totalMinWeekly:totalMinWk,allocations:alloc,schedule,
+      active:true,totalWeekly:totalWk,extraWeekly:extraWk,totalMinWeekly:totalMinWk+paidOffMinWk,allocations:alloc,schedule,
       totalMonths:totalWeeks!=null?Math.ceil(totalWeeks*7/30):null,
       totalWeeks,
       debtFreeDate:allPaidOff&&lastPayoff?lastPayoff.payoffDate:null,
@@ -1687,9 +1690,13 @@ export default function App({ initialData, onDataChange, theme }){
             return{n:cat.n,c:cat.c,items};
           }).filter(g=>g.items.length>0);
           // Debt-linked expense items for this week (read-only)
+          // Use forecast.projCat (snowball-aware week-by-week allocations) so that
+          // This Week matches the Cashflow view instead of using budgetForWeek which
+          // shows the raw budget amount on payment-day weeks.
           const debtExpRows=ECAT_DEBT_ITEMS.map(it=>{
             const actual=catData[it.id]&&catData[it.id][wi];
-            const bud=budgetForWeek(budgets[it.id],wi,it.id);
+            const proj=forecast.projCat[it.id]&&forecast.projCat[it.id][wi];
+            const bud=proj!=null?proj:budgetForWeek(budgets[it.id],wi,it.id);
             return{id:it.id,n:it.n,debtName:it.debtName,groupColor:it.groupColor,actual,bud,display:actual!=null?actual:(bud||null)};
           }).filter(x=>x.display!=null&&x.display!==0);
           // Income items
