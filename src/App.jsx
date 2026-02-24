@@ -1255,8 +1255,8 @@ export default function App({ initialData, onDataChange, theme }){
           let wkRem=alive.length>0?totalWk:0;
           const wkAlloc={};
           alive.forEach(d=>{
-            const minDue=minPaymentDueInWeek(d,wi,sun);
-            const m=Math.min(minDue,wkRem,sBals[d.id]);
+            const minWk=d.minimumPayment?freqToWeekly(d.minimumPayment,d.minPaymentFreq||"m"):0;
+            const m=Math.min(minWk,wkRem,sBals[d.id]);
             wkAlloc[d.id]=m;wkRem-=m;
           });
           for(const d of alive){
